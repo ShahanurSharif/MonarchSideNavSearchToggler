@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.15.0",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "monarch-sidenav-search-toggler",
+    "libraryId": "020453a9-06f3-4b81-8718-fc18dbeb8d15",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "monarch-sidenav-search-toggler",
+    "solutionShortDescription": "monarch-sidenav-search-toggler description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "extension",
+    "extensionType": "ApplicationCustomizer"
+  }
+}

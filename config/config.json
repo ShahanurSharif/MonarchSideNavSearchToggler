@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "monarch-sidenav-search-toggler-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/monarchSidenavSearchToggler/MonarchSidenavSearchTogglerApplicationCustomizer.js",
+          "manifest": "./src/extensions/monarchSidenavSearchToggler/MonarchSidenavSearchTogglerApplicationCustomizer.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "MonarchSidenavSearchTogglerApplicationCustomizerStrings": "lib/extensions/monarchSidenavSearchToggler/loc/{locale}.js"
+  }
+}

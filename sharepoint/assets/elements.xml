@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <CustomAction
+        Title="MonarchSidenavSearchToggler"
+        Location="ClientSideExtension.ApplicationCustomizer"
+        ClientSideComponentId="66f08679-1409-4558-a68f-be28642739c7"
+        ClientSideComponentProperties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
+    </CustomAction>
+</Elements>
