@@ -2,7 +2,9 @@ import { Log } from '@microsoft/sp-core-library';
 import {
   BaseApplicationCustomizer
 } from '@microsoft/sp-application-base';
-import { Dialog } from '@microsoft/sp-dialog';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+import MonarchSidenavSearchToggler from './MonarchSidenavSearchToggler';
 
 import * as strings from 'MonarchSidenavSearchTogglerApplicationCustomizerStrings';
 
@@ -25,15 +27,29 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
 
-    let message: string = this.properties.testMessage;
-    if (!message) {
-      message = '(No properties were provided.)';
+    // Create a container div for the React component
+    const customNavId = 'monarch-sidenav-search-toggler-root';
+    let container = document.getElementById(customNavId);
+    if (!container) {
+      container = document.createElement('div');
+      container.id = customNavId;
+      document.body.appendChild(container);
     }
 
-    Dialog.alert(`Hello from ${strings.Title}:\n\n${message}`).catch(() => {
-      /* handle error */
-    });
+    ReactDOM.render(
+      React.createElement(MonarchSidenavSearchToggler, { onToggle: () => {} }),
+      container
+    );
 
     return Promise.resolve();
+  }
+
+  public onDispose(): void {
+    const customNavId = 'monarch-sidenav-search-toggler-root';
+    const container = document.getElementById(customNavId);
+    if (container) {
+      ReactDOM.unmountComponentAtNode(container);
+      container.remove();
+    }
   }
 }
