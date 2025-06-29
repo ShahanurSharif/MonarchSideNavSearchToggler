@@ -37,7 +37,7 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
     }
 
     ReactDOM.render(
-      React.createElement(MonarchSidenavSearchToggler, { onToggle: () => {} }),
+      React.createElement(MonarchSidenavSearchToggler, { description: 'Monarch Side Navigation Toggler' }),
       container
     );
 
