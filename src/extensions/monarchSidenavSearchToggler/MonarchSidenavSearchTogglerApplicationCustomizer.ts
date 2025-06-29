@@ -27,7 +27,7 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
 
-    // Create a container div for the React component
+    // Create a container div for the React component with fixed positioning
     const customNavId = 'monarch-sidenav-search-toggler-root';
     let container = document.getElementById(customNavId);
     if (!container) {

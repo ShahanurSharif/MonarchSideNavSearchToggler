@@ -9,33 +9,37 @@ const MonarchSidenavSearchToggler: React.FC<MonarchSidenavSearchTogglerProps> = 
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
 
-  const handleToggle = () => {
+  const handleToggle = (): void => {
     setOpen(!open);
     onToggle();
   };
 
   return (
-    <div className={styles.sidenavContainer}>
-      <button className={styles.toggler} onClick={handleToggle} aria-label={open ? 'Close navigation' : 'Open navigation'}>
-        {open ? '✖' : '☰'}
-      </button>
+    <div>
+      <div className={styles.buttonContainer}>
+        <button className={styles.toggler} onClick={handleToggle} aria-label={open ? 'Close navigation' : 'Open navigation'}>
+          {open ? '✖' : '☰'}
+        </button>
+      </div>
       {open && (
-        <nav className={styles.sidenav} aria-label="Side navigation">
-          <input
-            className={styles.search}
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            aria-label="Search navigation"
-          />
-          {/* Add nav items here */}
-          <ul className={styles.navList}>
-            <li>Home</li>
-            <li>About</li>
-            <li>Contact</li>
-          </ul>
-        </nav>
+        <div className={styles.sidebarContainer}>
+          <nav className={styles.sidenav} aria-label="Side navigation">
+            <input
+              className={styles.search}
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              aria-label="Search navigation"
+            />
+            {/* Add nav items here */}
+            <ul className={styles.navList}>
+              <li>Home</li>
+              <li>About</li>
+              <li>Contact</li>
+            </ul>
+          </nav>
+        </div>
       )}
     </div>
   );

@@ -1,52 +1,153 @@
-.sidenavContainer {
+.buttonContainer {
   position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
+  top: 100px; // Below SharePoint top navigation and command bar
+  left: 20px; // Left side within viewport
+  z-index: 1002; // Higher than sidebar to be visible on top
+  pointer-events: auto; // Ensure interactions work
+}
+
+.sidebarContainer {
+  position: fixed;
+  top: 0; // Start from top of viewport
+  left: 20px; // Same left position as button
+  z-index: 1000; // Below button but above content
+  pointer-events: auto; // Ensure interactions work
 }
 
 .toggler {
   background: #0078d4;
   color: #fff;
   border: none;
-  padding: 0.5rem 1rem;
-  font-size: 1.5rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  border-radius: 0 4px 4px 0;
-  margin: 0.5rem 0;
+  border-radius: 4px;
+  margin: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #106ebe;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
 }
 
 .sidenav {
   background: #fff;
   border-right: 1px solid #e1e1e1;
+  border: 1px solid #e1e1e1;
+  border-radius: 4px;
   width: 240px;
-  height: 100vh;
+  height: calc(100vh - 100px); // Account for padding-top
+  max-height: calc(100vh - 100px); // Full height minus padding
   padding: 1rem;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+  padding-top: 100px; // As requested - 100px top padding
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  position: fixed; // Fixed positioning as requested
+  top: 0; // Start from top
+  left: 0; // Align with container
+  z-index: 999; // Below button container
+  pointer-events: auto; // Ensure all interactions work
 }
 
 .search {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d2d0ce;
+  border-radius: 2px;
+  font-size: 0.875rem;
+  font-family: "Segoe UI", "Segoe UI Web (West European)", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  
+  &:focus {
+    border-color: #0078d4;
+    outline: none;
+    box-shadow: 0 0 0 1px #0078d4;
+  }
+  
+  &::placeholder {
+    color: #605e5c;
+  }
 }
 
 .navList {
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .navList li {
-  padding: 0.5rem 0;
+  padding: 0.75rem 0.5rem;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #edebe9;
+  font-size: 0.875rem;
+  font-family: "Segoe UI", "Segoe UI Web (West European)", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  color: #323130;
+  transition: background-color 0.1s ease;
+  
+  &:hover {
+    background-color: #f3f2f1;
+  }
+  
+  &:active {
+    background-color: #edebe9;
+  }
 }
 
 .navList li:last-child {
   border-bottom: none;
+}
+
+// Responsive behavior
+@media (max-width: 768px) {
+  .buttonContainer {
+    left: 10px;
+    top: 80px; // Adjust for mobile SharePoint navigation
+  }
+  
+  .sidebarContainer {
+    left: 10px;
+  }
+  
+  .sidenav {
+    width: 200px;
+    max-height: calc(100vh - 80px);
+    height: calc(100vh - 80px); // Adjust for mobile viewport
+    padding-top: 80px; // Adjust padding for mobile
+  }
+  
+  .toggler {
+    padding: 0.5rem 0.6rem;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .buttonContainer {
+    left: 5px;
+  }
+  
+  .sidebarContainer {
+    left: 5px;
+  }
+  
+  .sidenav {
+    width: 180px;
+    max-height: calc(100vh - 70px);
+    height: calc(100vh - 70px);
+    padding-top: 70px; // Smaller padding for very small screens
+  }
 }
