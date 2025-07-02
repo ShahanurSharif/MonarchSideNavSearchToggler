@@ -1,20 +1,57 @@
 import * as React from 'react';
 import { DefaultButton } from '@fluentui/react/lib/Button';
+import { SPHttpClientResponse, SPHttpClientConfiguration, ODataVersion } from '@microsoft/sp-http';
+import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
 import styles from './MonarchSidenavSearchToggler.module.scss';
 
 export interface IMonarchSidenavSearchTogglerProps {
   description: string;
+  context: ApplicationCustomizerContext;
 }
 
-export default class MonarchSidenavSearchToggler extends React.Component<IMonarchSidenavSearchTogglerProps, { isOpen: boolean }> {
+export interface ISearchResult {
+  Title: string;
+  Path: string;
+  FileType: string;
+  LastModifiedTime: string;
+  Author: string;
+  HitHighlightedSummary: string;
+}
+
+export interface ISearchCell {
+  Key: string;
+  Value: string;
+  ValueType: string;
+}
+
+export interface ISearchRow {
+  Cells: ISearchCell[];
+}
+
+export interface IComponentState {
+  isOpen: boolean;
+  searchQuery: string;
+  searchResults: ISearchResult[];
+  isSearching: boolean;
+  hasSearched: boolean;
+}
+
+export default class MonarchSidenavSearchToggler extends React.Component<IMonarchSidenavSearchTogglerProps, IComponentState> {
   private readonly CACHE_KEY = 'monarch-sidenav-toggle-state';
   private readonly CACHE_EXPIRY_HOURS = 365 * 24; // Cache expires after 365 days (1 year)
+  private searchTimeout: number | null = null;
 
   constructor(props: IMonarchSidenavSearchTogglerProps) {
     super(props);
     // Load cached state or default to false
     const cachedState = this.loadToggleState();
-    this.state = { isOpen: cachedState };
+    this.state = { 
+      isOpen: cachedState,
+      searchQuery: '',
+      searchResults: [],
+      isSearching: false,
+      hasSearched: false
+    };
   }
 
   public componentDidMount(): void {
@@ -94,7 +131,7 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     sidebarContainer.innerHTML = `
       <div class="${styles.sidebar}">
         <div class="${styles.sidebarHeader}">
-          <h2 class="${styles.sidebarTitle}">Browse all articles</h2>
+          <h2 class="${styles.sidebarTitle}">Document Search</h2>
           <div class="${styles.headerButtons}">
             <button id="monarch-sidebar-settings" class="${styles.headerButton}" aria-label="Settings">
               <span style="font-size: 16px;">⚙</span>
@@ -105,47 +142,13 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
           </div>
         </div>
         <div class="${styles.searchContainer}">
-          <input type="text" placeholder="Search articles..." class="${styles.searchInput}" />
+          <input type="text" id="document-search-input" placeholder="Search documents..." class="${styles.searchInput}" />
         </div>
-        <nav class="${styles.navigation}">
-          <ul class="${styles.navList}">
-            <li class="${styles.navItem}">
-              <a href="#" class="${styles.navLink}">Home</a>
-            </li>
-            <li class="${styles.navItem}">
-              <div class="${styles.navCategory}">
-                <span class="${styles.categoryTitle}">IT Support</span>
-                <ul class="${styles.subNavList}">
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">Printer Connection</a>
-                  </li>
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">Password Reset</a>
-                  </li>
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">VPN Access</a>
-                  </li>
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">MFA Setup</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="${styles.navItem}">
-              <div class="${styles.navCategory}">
-                <span class="${styles.categoryTitle}">Human Resources</span>
-                <ul class="${styles.subNavList}">
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">Expense Reimbursement</a>
-                  </li>
-                  <li class="${styles.subNavItem}">
-                    <a href="#" class="${styles.subNavLink}">Time Off Requests</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          </ul>
-        </nav>
+        <div class="${styles.searchResults}" id="search-results-container">
+          <div class="${styles.defaultMessage}">
+            <p>Type to search for documents...</p>
+          </div>
+        </div>
       </div>
     `;
 
@@ -161,6 +164,231 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     const settingsButton = document.getElementById('monarch-sidebar-settings');
     if (settingsButton) {
       settingsButton.addEventListener('click', this.handleSettings);
+    }
+
+    // Add search input event listener
+    const searchInput = document.getElementById('document-search-input') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.addEventListener('input', this.handleSearchInput);
+    }
+  }
+
+  private handleSearchInput = (event: Event): void => {
+    const target = event.target as HTMLInputElement;
+    const query = target.value.trim();
+    
+    // Clear existing timeout
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    this.setState({ searchQuery: query });
+
+    // If query is empty, reset to default state
+    if (query === '') {
+      this.setState({ 
+        searchResults: [], 
+        isSearching: false, 
+        hasSearched: false 
+      });
+      this.renderDefaultMessage();
+      return;
+    }
+
+    // Debounce search - wait 300ms after user stops typing
+    this.searchTimeout = setTimeout(() => {
+      this.performSearch(query).catch((error) => {
+        console.error('MonarchSideNav: Search timeout error:', error);
+      });
+    }, 300);
+  };
+
+  private async performSearch(query: string): Promise<void> {
+    if (!query || query.length < 2) {
+      return;
+    }
+
+    console.log('MonarchSideNav: Performing search for:', query);
+    this.setState({ isSearching: true, hasSearched: true });
+    this.renderLoadingIndicator();
+
+    try {
+      // Use OData v3 and correct Accept header for SharePoint search
+      const config = new SPHttpClientConfiguration({
+        defaultODataVersion: ODataVersion.v3
+      });
+      const searchValue = `'${query}*'`;
+      const searchUrl = `${this.props.context.pageContext.web.absoluteUrl}/_api/search/query?querytext=${encodeURIComponent(searchValue)}&selectproperties='Title,Path,FileType,LastModifiedTime,Author,HitHighlightedSummary'&rowlimit=20`;
+
+      console.log('MonarchSideNav: Search URL:', searchUrl);
+
+      const response: SPHttpClientResponse = await this.props.context.spHttpClient.get(
+        searchUrl,
+        config,
+        {
+          headers: {
+            'Accept': 'application/json;odata=minimalmetadata;charset=utf-8'
+          }
+        }
+      );
+
+      if (response && response.ok) {
+        const data = await response.json();
+        // Handle both possible response formats
+        const searchData = data.PrimaryQueryResult || data.d?.query?.PrimaryQueryResult;
+        const allResults: ISearchResult[] = searchData?.RelevantResults?.Table?.Rows?.map((row: ISearchRow) => {
+          const cells = row.Cells;
+          return {
+            Title: this.getCellValue(cells, 'Title') || 'Untitled Document',
+            Path: this.getCellValue(cells, 'Path') || '',
+            FileType: this.getCellValue(cells, 'FileType') || '',
+            LastModifiedTime: this.getCellValue(cells, 'LastModifiedTime') || '',
+            Author: this.getCellValue(cells, 'Author') || '',
+            HitHighlightedSummary: this.getCellValue(cells, 'HitHighlightedSummary') || ''
+          };
+        }) || [];
+
+        // Filter for supported document types
+        const supportedFileTypes = ['doc', 'docx', 'pdf', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'csv'];
+        const searchResults = allResults.filter(result => 
+          result.FileType && supportedFileTypes.indexOf(result.FileType.toLowerCase()) !== -1
+        );
+
+        console.log('MonarchSideNav: All results:', allResults.length);
+        console.log('MonarchSideNav: Filtered document results:', searchResults.length);
+        console.log('MonarchSideNav: Search results:', searchResults);
+        
+        this.setState({ 
+          searchResults, 
+          isSearching: false 
+        });
+        this.renderSearchResults(searchResults);
+      } else {
+        const status = response ? response.status : 'Unknown';
+        const statusText = response ? response.statusText : 'Unknown';
+        let errorText = '';
+        try {
+          errorText = await response.text();
+        } catch {
+          errorText = '[Could not read response text]';
+        }
+        console.error('MonarchSideNav: Search failed. Status:', status, statusText);
+        console.error('MonarchSideNav: Error response text:', errorText);
+        throw new Error(`Search request failed with status ${status} ${statusText}: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('MonarchSideNav: Search error:', error);
+      console.error('MonarchSideNav: Search query was: *');
+      console.error('MonarchSideNav: Site URL:', this.props.context.pageContext.web.absoluteUrl);
+      
+      this.setState({ 
+        searchResults: [], 
+        isSearching: false 
+      });
+      this.renderErrorMessage();
+    }
+  }
+
+  private getCellValue(cells: ISearchCell[], key: string): string {
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].Key === key) {
+        return cells[i].Value || '';
+      }
+    }
+    return '';
+  }
+
+  private renderDefaultMessage(): void {
+    const container = document.getElementById('search-results-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="${styles.defaultMessage}">
+          <p>Type to search for documents...</p>
+        </div>
+      `;
+    }
+  }
+
+  private renderLoadingIndicator(): void {
+    const container = document.getElementById('search-results-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="${styles.loadingIndicator}">
+          <div class="${styles.loadingSpinner}"></div>
+          <p>Searching documents...</p>
+        </div>
+      `;
+    }
+  }
+
+  private renderSearchResults(results: ISearchResult[]): void {
+    const container = document.getElementById('search-results-container');
+    if (!container) return;
+
+    if (results.length === 0) {
+      container.innerHTML = `
+        <div class="${styles.noResultsMessage}">
+          <p>No documents found</p>
+        </div>
+      `;
+      return;
+    }
+
+    const resultsHtml = results.map(result => {
+      const fileIcon = this.getFileIcon(result.FileType);
+      const truncatedTitle = result.Title.length > 40 ? result.Title.substring(0, 40) + '...' : result.Title;
+      
+      return `
+        <div class="${styles.searchResultItem}">
+          <a href="${result.Path}" class="${styles.searchResultLink}" target="_blank" rel="noopener noreferrer">
+            <div class="${styles.resultIcon}">${fileIcon}</div>
+            <div class="${styles.resultContent}">
+              <div class="${styles.resultTitle}">${truncatedTitle}</div>
+              <div class="${styles.resultMeta}">
+                <span class="${styles.fileType}">${result.FileType.toUpperCase()}</span>
+                ${result.Author ? `<span class="${styles.author}">by ${result.Author}</span>` : ''}
+              </div>
+            </div>
+          </a>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="${styles.searchResultsList}">
+        <div class="${styles.resultsHeader}">
+          <p>${results.length} document${results.length !== 1 ? 's' : ''} found</p>
+        </div>
+        ${resultsHtml}
+      </div>
+    `;
+  }
+
+  private renderErrorMessage(): void {
+    const container = document.getElementById('search-results-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="${styles.errorMessage}">
+          <p>Unable to search documents at this time.</p>
+          <p>Please check if you have permission to search this site, or try again later.</p>
+        </div>
+      `;
+    }
+  }
+
+  private getFileIcon(fileType: string): string {
+    const type = fileType.toLowerCase();
+    switch (type) {
+      case 'pdf': return '📄';
+      case 'doc':
+      case 'docx': return '📝';
+      case 'xls':
+      case 'xlsx': return '📊';
+      case 'ppt':
+      case 'pptx': return '📈';
+      case 'txt': return '📋';
+      case 'csv': return '📄';
+      default: return '📁';
     }
   }
 
@@ -289,10 +517,16 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
   };
 
   private cleanup(): void {
+    // Clear search timeout
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
     // Remove event listeners
     const toggleButton = document.getElementById('monarch-sidenav-toggle');
     const closeButton = document.getElementById('monarch-sidebar-close');
     const settingsButton = document.getElementById('monarch-sidebar-settings');
+    const searchInput = document.getElementById('document-search-input');
     
     if (toggleButton) {
       toggleButton.removeEventListener('click', this.handleToggle);
@@ -304,6 +538,10 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
 
     if (settingsButton) {
       settingsButton.removeEventListener('click', this.handleSettings);
+    }
+
+    if (searchInput) {
+      searchInput.removeEventListener('input', this.handleSearchInput);
     }
 
     // Remove injected elements

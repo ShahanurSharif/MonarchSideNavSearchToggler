@@ -2,6 +2,7 @@ import { Log } from '@microsoft/sp-core-library';
 import {
   BaseApplicationCustomizer
 } from '@microsoft/sp-application-base';
+// SPHttpClient import removed as it's not used in this file
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import MonarchSidenavSearchToggler from './MonarchSidenavSearchToggler';
@@ -37,7 +38,10 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
     }
 
     ReactDOM.render(
-      React.createElement(MonarchSidenavSearchToggler, { description: 'Monarch Side Navigation Toggler' }),
+      React.createElement(MonarchSidenavSearchToggler, { 
+        description: 'Monarch Side Navigation Toggler',
+        context: this.context
+      }),
       container
     );
 
