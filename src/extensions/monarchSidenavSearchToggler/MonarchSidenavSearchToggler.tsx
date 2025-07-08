@@ -1,48 +1,30 @@
 import * as React from 'react';
 import { DefaultButton } from '@fluentui/react/lib/Button';
-import { SPHttpClientResponse, SPHttpClientConfiguration, ODataVersion } from '@microsoft/sp-http';
-import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
+import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
+import { 
+  INavigationItem, 
+  INavigationSearchResult,
+  IComponentState,
+  INavigationProps,
+  IThemeConfig,
+  DefaultNavigationConfig 
+} from './interfaces/INavigationInterfaces';
+import { NavigationConfigService } from './services/NavigationConfigService';
+import { NavigationConfigModal } from './components/NavigationConfigModal';
+import { ThemeConfigModal } from './components/ThemeConfigModal';
 import styles from './MonarchSidenavSearchToggler.module.scss';
 
-export interface IMonarchSidenavSearchTogglerProps {
-  description: string;
-  context: ApplicationCustomizerContext;
-}
-
-export interface ISearchResult {
-  Title: string;
-  Path: string;
-  FileType: string;
-  LastModifiedTime: string;
-  Author: string;
-  HitHighlightedSummary: string;
-}
-
-export interface ISearchCell {
-  Key: string;
-  Value: string;
-  ValueType: string;
-}
-
-export interface ISearchRow {
-  Cells: ISearchCell[];
-}
-
-export interface IComponentState {
-  isOpen: boolean;
-  searchQuery: string;
-  searchResults: ISearchResult[];
-  isSearching: boolean;
-  hasSearched: boolean;
-}
-
-export default class MonarchSidenavSearchToggler extends React.Component<IMonarchSidenavSearchTogglerProps, IComponentState> {
+export default class MonarchSidenavSearchToggler extends React.Component<INavigationProps, IComponentState> {
   private readonly CACHE_KEY = 'monarch-sidenav-toggle-state';
   private readonly CACHE_EXPIRY_HOURS = 365 * 24; // Cache expires after 365 days (1 year)
   private searchTimeout: number | null = null;
+  private configService: NavigationConfigService;
 
-  constructor(props: IMonarchSidenavSearchTogglerProps) {
+  constructor(props: INavigationProps) {
     super(props);
+    
+    this.configService = new NavigationConfigService(props.context);
+    
     // Load cached state or default to false
     const cachedState = this.loadToggleState();
     this.state = { 
@@ -50,27 +32,42 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
       searchQuery: '',
       searchResults: [],
       isSearching: false,
-      hasSearched: false
+      hasSearched: false,
+      navigationConfig: DefaultNavigationConfig,
+      modalState: {
+        isVisible: false,
+        mode: 'add'
+      },
+      isConfigMode: false,
+      hasUnsavedChanges: false
     };
   }
 
-  public componentDidMount(): void {
+  public async componentDidMount(): Promise<void> {
+    // Load navigation configuration
+    try {
+      const config = await this.configService.loadConfiguration();
+      this.initializeIsExpanded(config.navigation);
+      this.setState({ navigationConfig: config });
+    } catch (error) {
+      console.error('MonarchSidebarNav: Failed to load configuration:', error);
+    }
+
     this.injectToggleButton();
     this.injectSidebar();
     
     // Apply cached state if sidebar should be open
     if (this.state.isOpen) {
-      // Increased delay to ensure SPPageChrome is fully loaded
       setTimeout(() => {
-        console.log('MonarchSideNav: Applying cached open state');
+        console.log('MonarchSidebarNav: Applying cached open state');
         this.applyToggleState(true);
         
-        // Double-check SPPageChrome adjustment after another small delay
         setTimeout(() => {
           this.ensureContentAdjustment(true);
         }, 200);
       }, 300);
     }
+    this.makeToggleButtonDraggable();
   }
 
   public componentWillUnmount(): void {
@@ -87,7 +84,7 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
       id: 'monarch-sidenav-toggle',
       'aria-label': 'Toggle Navigation',
       onClick: this.handleToggle,
-      iconProps: { iconName: 'Search' },
+      iconProps: { iconName: 'GlobalNavButton' },
       styles: {
         root: {
           minWidth: '47px',
@@ -131,10 +128,13 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     sidebarContainer.innerHTML = `
       <div class="${styles.sidebar}">
         <div class="${styles.sidebarHeader}">
-          <h2 class="${styles.sidebarTitle}">Document Search</h2>
+          <h2 class="${styles.sidebarTitle}">Navigation</h2>
           <div class="${styles.headerButtons}">
-            <button id="monarch-sidebar-settings" class="${styles.headerButton}" aria-label="Settings">
-              <span style="font-size: 16px;">⚙</span>
+            <button id="monarch-sidebar-settings" class="${styles.headerButton}" aria-label="Settings" title="Configure Navigation">
+              <span style="font-size: 16px;">⚙️</span>
+            </button>
+            <button id="monarch-sidebar-edit" class="${styles.headerButton}" aria-label="Edit Mode" title="Edit Navigation">
+              <span style="font-size: 16px;">✏️</span>
             </button>
             <button id="monarch-sidebar-close" class="${styles.headerButton}" aria-label="Close">
               <span style="font-size: 16px;">&times;</span>
@@ -142,11 +142,11 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
           </div>
         </div>
         <div class="${styles.searchContainer}">
-          <input type="text" id="document-search-input" placeholder="Search documents..." class="${styles.searchInput}" />
+          <input type="text" id="navigation-search-input" placeholder="Search navigation..." class="${styles.searchInput}" />
         </div>
-        <div class="${styles.searchResults}" id="search-results-container">
+        <div class="${styles.navigationContent}" id="navigation-content-container">
           <div class="${styles.defaultMessage}">
-            <p>Type to search for documents...</p>
+            <p>Loading navigation...</p>
           </div>
         </div>
       </div>
@@ -154,23 +154,29 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
 
     document.body.appendChild(sidebarContainer);
 
-    // Add close button event listener
+    // Add event listeners
     const closeButton = document.getElementById('monarch-sidebar-close');
     if (closeButton) {
       closeButton.addEventListener('click', this.handleToggle);
     }
 
-    // Add settings button event listener
     const settingsButton = document.getElementById('monarch-sidebar-settings');
     if (settingsButton) {
-      settingsButton.addEventListener('click', this.handleSettings);
+      settingsButton.addEventListener('click', this.handleThemeSettings);
     }
 
-    // Add search input event listener
-    const searchInput = document.getElementById('document-search-input') as HTMLInputElement;
+    const editButton = document.getElementById('monarch-sidebar-edit');
+    if (editButton) {
+      editButton.addEventListener('click', this.handleEditMode);
+    }
+
+    const searchInput = document.getElementById('navigation-search-input') as HTMLInputElement;
     if (searchInput) {
       searchInput.addEventListener('input', this.handleSearchInput);
     }
+
+    // Initial render of navigation
+    this.renderNavigation();
   }
 
   private handleSearchInput = (event: Event): void => {
@@ -184,103 +190,49 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
 
     this.setState({ searchQuery: query });
 
-    // If query is empty, reset to default state
+    // If query is empty, show all navigation
     if (query === '') {
       this.setState({ 
         searchResults: [], 
         isSearching: false, 
         hasSearched: false 
       });
-      this.renderDefaultMessage();
+      this.renderNavigation();
       return;
     }
 
     // Debounce search - wait 300ms after user stops typing
     this.searchTimeout = setTimeout(() => {
-      this.performSearch(query).catch((error) => {
-        console.error('MonarchSideNav: Search timeout error:', error);
-      });
+      this.performNavigationSearch(query);
     }, 300);
   };
 
-  private async performSearch(query: string): Promise<void> {
-    if (!query || query.length < 2) {
+  private performNavigationSearch(query: string): void {
+    if (!query || query.length < 1) {
       return;
     }
 
-    console.log('MonarchSideNav: Performing search for:', query);
+    console.log('MonarchSidebarNav: Performing navigation search for:', query);
     this.setState({ isSearching: true, hasSearched: true });
-    this.renderLoadingIndicator();
 
     try {
-      // Use OData v3 and correct Accept header for SharePoint search
-      const config = new SPHttpClientConfiguration({
-        defaultODataVersion: ODataVersion.v3
-      });
-      const searchValue = `'${query}*'`;
-      const searchUrl = `${this.props.context.pageContext.web.absoluteUrl}/_api/search/query?querytext=${encodeURIComponent(searchValue)}&selectproperties='Title,Path,FileType,LastModifiedTime,Author,HitHighlightedSummary'&rowlimit=20`;
+      const results = this.configService.searchNavigationItems(this.state.navigationConfig.navigation, query);
+      const searchResults: INavigationSearchResult[] = results.map(result => ({
+        item: result.item,
+        matchType: result.item.title.toLowerCase().includes(query.toLowerCase()) ? 'title' : 'url',
+        highlightedTitle: this.highlightSearchTerm(result.item.title, query),
+        path: result.path
+      }));
 
-      console.log('MonarchSideNav: Search URL:', searchUrl);
-
-      const response: SPHttpClientResponse = await this.props.context.spHttpClient.get(
-        searchUrl,
-        config,
-        {
-          headers: {
-            'Accept': 'application/json;odata=minimalmetadata;charset=utf-8'
-          }
-        }
-      );
-
-      if (response && response.ok) {
-        const data = await response.json();
-        // Handle both possible response formats
-        const searchData = data.PrimaryQueryResult || data.d?.query?.PrimaryQueryResult;
-        const allResults: ISearchResult[] = searchData?.RelevantResults?.Table?.Rows?.map((row: ISearchRow) => {
-          const cells = row.Cells;
-          return {
-            Title: this.getCellValue(cells, 'Title') || 'Untitled Document',
-            Path: this.getCellValue(cells, 'Path') || '',
-            FileType: this.getCellValue(cells, 'FileType') || '',
-            LastModifiedTime: this.getCellValue(cells, 'LastModifiedTime') || '',
-            Author: this.getCellValue(cells, 'Author') || '',
-            HitHighlightedSummary: this.getCellValue(cells, 'HitHighlightedSummary') || ''
-          };
-        }) || [];
-
-        // Filter for supported document types
-        const supportedFileTypes = ['doc', 'docx', 'pdf', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'csv'];
-        const searchResults = allResults.filter(result => 
-          result.FileType && supportedFileTypes.indexOf(result.FileType.toLowerCase()) !== -1
-        );
-
-        console.log('MonarchSideNav: All results:', allResults.length);
-        console.log('MonarchSideNav: Filtered document results:', searchResults.length);
-        console.log('MonarchSideNav: Search results:', searchResults);
-        
-        this.setState({ 
-          searchResults, 
-          isSearching: false 
-        });
-        this.renderSearchResults(searchResults);
-      } else {
-        const status = response ? response.status : 'Unknown';
-        const statusText = response ? response.statusText : 'Unknown';
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch {
-          errorText = '[Could not read response text]';
-        }
-        console.error('MonarchSideNav: Search failed. Status:', status, statusText);
-        console.error('MonarchSideNav: Error response text:', errorText);
-        throw new Error(`Search request failed with status ${status} ${statusText}: ${errorText}`);
-      }
-    } catch (error) {
-      console.error('MonarchSideNav: Search error:', error);
-      console.error('MonarchSideNav: Search query was: *');
-      console.error('MonarchSideNav: Site URL:', this.props.context.pageContext.web.absoluteUrl);
+      console.log('MonarchSidebarNav: Navigation search results:', searchResults);
       
+      this.setState({ 
+        searchResults, 
+        isSearching: false 
+      });
+      this.renderSearchResults(searchResults);
+    } catch (error) {
+      console.error('MonarchSidebarNav: Navigation search error:', error);
       this.setState({ 
         searchResults: [], 
         isSearching: false 
@@ -289,65 +241,155 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     }
   }
 
-  private getCellValue(cells: ISearchCell[], key: string): string {
-    for (let i = 0; i < cells.length; i++) {
-      if (cells[i].Key === key) {
-        return cells[i].Value || '';
+  private highlightSearchTerm(text: string, searchTerm: string): string {
+    if (!searchTerm) return text;
+    // Escape special regex characters for security
+    const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try {
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return text.replace(regex, '<mark>$1</mark>');
+    } catch {
+      return text;
+    }
+  }
+
+  private renderNavigation(): void {
+    const container = document.getElementById('navigation-content-container');
+    if (!container) return;
+
+    const { navigationConfig, isConfigMode } = this.state;
+
+    if (navigationConfig.navigation.length === 0) {
+      container.innerHTML = `
+        <div class="${styles.emptyState}">
+          <p>No navigation items configured</p>
+          ${isConfigMode ? `<button class="${styles.addButton}" id="add-nav-item">Add Navigation Item</button>` : ''}
+        </div>
+      `;
+      
+      if (isConfigMode) {
+        const addButton = document.getElementById('add-nav-item');
+        if (addButton) {
+          addButton.addEventListener('click', this.handleAddNavItem);
+        }
+      }
+      return;
+    }
+
+    const navigationHtml = this.renderNavigationItems(navigationConfig.navigation, 0);
+    
+    container.innerHTML = `
+      <div class="${styles.navigationList}">
+        ${navigationHtml}
+        ${isConfigMode ? `
+          <div class="${styles.configActions}">
+            <button class="${styles.addButton}" id="add-nav-item">
+              <span>➕</span> Add Navigation Item
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    // Add event listeners for navigation items
+    this.addNavigationEventListeners();
+    
+    if (isConfigMode) {
+      const addButton = document.getElementById('add-nav-item');
+      if (addButton) {
+        addButton.addEventListener('click', this.handleAddNavItem);
       }
     }
-    return '';
   }
 
-  private renderDefaultMessage(): void {
-    const container = document.getElementById('search-results-container');
-    if (container) {
-      container.innerHTML = `
-        <div class="${styles.defaultMessage}">
-          <p>Type to search for documents...</p>
-        </div>
-      `;
-    }
+  private renderNavigationItems(items: INavigationItem[], level: number): string {
+    return items
+      .sort((a, b) => a.order - b.order)
+      .map(item => {
+        const hasChildren = item.children && item.children.length > 0;
+        const indent = level * 16;
+        const isExpanded = item.isExpanded || false;
+        
+        return `
+          <div class="${styles.navItem}" data-level="${level}">
+            <div class="${styles.navItemContent}" 
+                 style="padding-left: ${indent}px" 
+                 data-id="${item.id}">
+              ${hasChildren ? `
+                <button class="${styles.expandButton}" 
+                        data-id="${item.id}" 
+                        aria-label="${isExpanded ? 'Collapse' : 'Expand'}">
+                  <span>${isExpanded ? '▼' : '▶'}</span>
+                </button>
+              ` : '<span class="nav-spacer" style="width: 16px; display: inline-block;"></span>'}
+              
+              <a href="${item.url}" 
+                 target="${item.target || '_self'}" 
+                 class="${styles.navLink}"
+                 data-id="${item.id}">
+                <span class="${styles.navTitle}">${item.title}</span>
+              </a>
+              
+              ${this.state.isConfigMode ? `
+                <div class="${styles.configButtons}">
+                  <button class="${styles.configButton}" 
+                          data-action="edit" 
+                          data-id="${item.id}"
+                          title="Edit Item">
+                    ✏️
+                  </button>
+                  <button class="${styles.configButton}" 
+                          data-action="delete" 
+                          data-id="${item.id}"
+                          title="Delete Item">
+                    🗑️
+                  </button>
+                  <button class="${styles.configButton}" 
+                          data-action="add-child" 
+                          data-id="${item.id}"
+                          title="Add Child Item">
+                    ➕
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+            
+            ${hasChildren && isExpanded ? `
+              <div class="${styles.navChildren}">
+                ${this.renderNavigationItems(item.children!, level + 1)}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
   }
 
-  private renderLoadingIndicator(): void {
-    const container = document.getElementById('search-results-container');
-    if (container) {
-      container.innerHTML = `
-        <div class="${styles.loadingIndicator}">
-          <div class="${styles.loadingSpinner}"></div>
-          <p>Searching documents...</p>
-        </div>
-      `;
-    }
-  }
-
-  private renderSearchResults(results: ISearchResult[]): void {
-    const container = document.getElementById('search-results-container');
+  private renderSearchResults(results: INavigationSearchResult[]): void {
+    const container = document.getElementById('navigation-content-container');
     if (!container) return;
 
     if (results.length === 0) {
       container.innerHTML = `
         <div class="${styles.noResultsMessage}">
-          <p>No documents found</p>
+          <p>No navigation items found</p>
         </div>
       `;
       return;
     }
 
     const resultsHtml = results.map(result => {
-      const fileIcon = this.getFileIcon(result.FileType);
-      const truncatedTitle = result.Title.length > 40 ? result.Title.substring(0, 40) + '...' : result.Title;
+      const pathText = result.path.length > 1 ? result.path.slice(0, -1).join(' > ') : '';
       
       return `
         <div class="${styles.searchResultItem}">
-          <a href="${result.Path}" class="${styles.searchResultLink}" target="_blank" rel="noopener noreferrer">
-            <div class="${styles.resultIcon}">${fileIcon}</div>
+          <a href="${result.item.url}" 
+             target="${result.item.target || '_self'}" 
+             class="${styles.searchResultLink}">
+            <div class="${styles.resultIcon}"></div>
             <div class="${styles.resultContent}">
-              <div class="${styles.resultTitle}">${truncatedTitle}</div>
-              <div class="${styles.resultMeta}">
-                <span class="${styles.fileType}">${result.FileType.toUpperCase()}</span>
-                ${result.Author ? `<span class="${styles.author}">by ${result.Author}</span>` : ''}
-              </div>
+              <div class="${styles.resultTitle}">${result.highlightedTitle}</div>
+              ${pathText ? `<div class="${styles.resultPath}">${pathText}</div>` : ''}
+              <div class="${styles.resultUrl}">${result.item.url}</div>
             </div>
           </a>
         </div>
@@ -357,7 +399,7 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     container.innerHTML = `
       <div class="${styles.searchResultsList}">
         <div class="${styles.resultsHeader}">
-          <p>${results.length} document${results.length !== 1 ? 's' : ''} found</p>
+          <p>${results.length} navigation item${results.length !== 1 ? 's' : ''} found</p>
         </div>
         ${resultsHtml}
       </div>
@@ -365,60 +407,293 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
   }
 
   private renderErrorMessage(): void {
-    const container = document.getElementById('search-results-container');
+    const container = document.getElementById('navigation-content-container');
     if (container) {
       container.innerHTML = `
         <div class="${styles.errorMessage}">
-          <p>Unable to search documents at this time.</p>
-          <p>Please check if you have permission to search this site, or try again later.</p>
+          <p>Unable to search navigation items.</p>
+          <p>Please try again or check the configuration.</p>
         </div>
       `;
     }
   }
 
-  private getFileIcon(fileType: string): string {
-    const type = fileType.toLowerCase();
-    switch (type) {
-      case 'pdf': return '📄';
-      case 'doc':
-      case 'docx': return '📝';
-      case 'xls':
-      case 'xlsx': return '📊';
-      case 'ppt':
-      case 'pptx': return '📈';
-      case 'txt': return '📋';
-      case 'csv': return '📄';
-      default: return '📁';
+  private addNavigationEventListeners(): void {
+    // Expand/collapse buttons
+    const expandButtons = document.querySelectorAll(`.${styles.expandButton}`);
+    expandButtons.forEach(button => {
+      button.addEventListener('click', this.handleExpandCollapse);
+    });
+
+    // Configuration buttons
+    if (this.state.isConfigMode) {
+      const configButtons = document.querySelectorAll(`.${styles.configButton}`);
+      configButtons.forEach(button => {
+        button.addEventListener('click', this.handleConfigAction);
+      });
     }
+  }
+
+  private handleExpandCollapse = (event: Event): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const button = event.target as HTMLElement;
+    const id = button.getAttribute('data-id');
+    
+    if (id) {
+      this.toggleNavigationItem(id);
+    }
+  };
+
+  private handleConfigAction = (event: Event): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const button = event.target as HTMLElement;
+    const action = button.getAttribute('data-action');
+    const id = button.getAttribute('data-id');
+    
+    if (!action || !id) return;
+
+    switch (action) {
+      case 'edit':
+        this.handleEditNavItem(id);
+        break;
+      case 'delete':
+        this.handleDeleteNavItem(id);
+        break;
+      case 'add-child':
+        this.handleAddChildNavItem(id);
+        break;
+    }
+  };
+
+  private toggleNavigationItem(id: string): void {
+    // Use a deep clone to ensure React re-renders
+    const config = JSON.parse(JSON.stringify(this.state.navigationConfig));
+    const updateExpanded = (items: INavigationItem[]): boolean => {
+      for (const item of items) {
+        if (item.id === id) {
+          item.isExpanded = !item.isExpanded;
+          return true;
+        }
+        if (item.children && updateExpanded(item.children)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (updateExpanded(config.navigation)) {
+      this.setState({ navigationConfig: config });
+      this.renderNavigation();
+    }
+  }
+
+  private handleAddNavItem = (): void => {
+    this.setState({
+      modalState: {
+        isVisible: true,
+        mode: 'add'
+      }
+    });
+  };
+
+  private handleAddChildNavItem = (parentId: string): void => {
+    this.setState({
+      modalState: {
+        isVisible: true,
+        mode: 'add',
+        parentId
+      }
+    });
+  };
+
+  private handleEditNavItem = (id: string): void => {
+    const item = this.configService.findNavigationItemById(this.state.navigationConfig.navigation, id);
+    if (item) {
+      this.setState({
+        modalState: {
+          isVisible: true,
+          mode: 'edit',
+          editingItem: { ...item }
+        }
+      });
+    }
+  };
+
+  private handleDeleteNavItem = (id: string): void => {
+    if (confirm('Are you sure you want to delete this navigation item and all its children?')) {
+      const config = { ...this.state.navigationConfig };
+      if (this.configService.removeNavigationItem(config, id)) {
+        this.setState({ 
+          navigationConfig: config,
+          hasUnsavedChanges: true 
+        });
+        this.renderNavigation();
+        
+        if (config.autoSave) {
+          this.saveConfiguration();
+        }
+      }
+    }
+  };
+
+  private handleEditMode = (): void => {
+    const newConfigMode = !this.state.isConfigMode;
+    this.setState({ isConfigMode: newConfigMode });
+    
+    // Update edit button appearance
+    const editButton = document.getElementById('monarch-sidebar-edit');
+    if (editButton) {
+      editButton.style.backgroundColor = newConfigMode ? '#0078d4' : '';
+      editButton.style.color = newConfigMode ? '#ffffff' : '';
+      editButton.title = newConfigMode ? 'Exit Edit Mode' : 'Edit Navigation';
+    }
+    
+    this.renderNavigation();
+  };
+
+  private handleThemeSettings = (): void => {
+    this.setState({
+      modalState: {
+        isVisible: true,
+        mode: 'theme'
+      }
+    });
+  };
+
+  private handleNavigationModalSave = (item: INavigationItem, parentId?: string): void => {
+    const config = { ...this.state.navigationConfig };
+    
+    if (this.state.modalState.mode === 'edit') {
+      this.configService.updateNavigationItem(config, item);
+    } else {
+      this.configService.addNavigationItem(config, item, parentId);
+    }
+    
+    this.setState({ 
+      navigationConfig: config,
+      hasUnsavedChanges: true,
+      modalState: { isVisible: false, mode: 'add' }
+    });
+    
+    this.renderNavigation();
+    
+    if (config.autoSave) {
+      this.saveConfiguration();
+    }
+  };
+
+  private handleNavigationModalCancel = (): void => {
+    this.setState({
+      modalState: { isVisible: false, mode: 'add' }
+    });
+  };
+
+  private handleThemeModalSave = (theme: IThemeConfig): void => {
+    const config = { ...this.state.navigationConfig };
+    config.theme = theme;
+    
+    this.setState({ 
+      navigationConfig: config,
+      hasUnsavedChanges: true,
+      modalState: { isVisible: false, mode: 'add' }
+    });
+    
+    this.applyTheme(theme);
+    
+    if (config.autoSave) {
+      this.saveConfiguration();
+    }
+  };
+
+  private handleThemeModalCancel = (): void => {
+    this.setState({
+      modalState: { isVisible: false, mode: 'add' }
+    });
+  };
+
+  private handleThemeModalReset = (): void => {
+    // Reset theme will be handled in the modal
+  };
+
+  private applyTheme(theme: IThemeConfig): void {
+    const sidebar = document.querySelector(`.${styles.sidebar}`) as HTMLElement;
+    if (sidebar) {
+      sidebar.style.setProperty('--primary-color', theme.primaryColor);
+      sidebar.style.setProperty('--secondary-color', theme.secondaryColor);
+      sidebar.style.setProperty('--background-color', theme.backgroundColor);
+      sidebar.style.setProperty('--text-color', theme.textColor);
+      sidebar.style.setProperty('--hover-color', theme.hoverColor);
+      sidebar.style.setProperty('--font-family', theme.fontFamily);
+      sidebar.style.setProperty('--font-size', theme.fontSize);
+      sidebar.style.setProperty('--border-radius', theme.borderRadius);
+      sidebar.style.width = theme.sidebarWidth;
+    }
+  }
+
+  private async saveConfiguration(): Promise<void> {
+    try {
+      const success = await this.configService.saveConfiguration(this.state.navigationConfig);
+      if (success) {
+        this.setState({ hasUnsavedChanges: false });
+        console.log('MonarchSidebarNav: Configuration saved successfully');
+      } else {
+        console.error('MonarchSidebarNav: Failed to save configuration');
+      }
+    } catch (error) {
+      console.error('MonarchSidebarNav: Error saving configuration:', error);
+    }
+  }
+
+  private getParentOptions(): IDropdownOption[] {
+    const options: IDropdownOption[] = [];
+    
+    const addOptions = (items: INavigationItem[], prefix = ''): void => {
+      for (const item of items) {
+        options.push({
+          key: item.id,
+          text: `${prefix}${item.title}`
+        });
+        
+        if (item.children && item.children.length > 0) {
+          addOptions(item.children, `${prefix}${item.title} > `);
+        }
+      }
+    };
+    
+    addOptions(this.state.navigationConfig.navigation);
+    return options;
   }
 
   private getSidebarWidth(): string {
     if (window.innerWidth <= 480) {
-      return '40%';
+      return '80%';
     } else if (window.innerWidth <= 768) {
-      return '30%';
+      return '50%';
     }
-    return '20%';
+    return this.state.navigationConfig.theme.sidebarWidth || '300px';
   }
 
   private getContentWidth(): string {
     if (window.innerWidth <= 480) {
-      return '60%';
+      return '20%';
     } else if (window.innerWidth <= 768) {
-      return '70%';
+      return '50%';
     }
-    return '80%';
+    const sidebarWidth = parseInt(this.state.navigationConfig.theme.sidebarWidth.replace('px', ''));
+    return `calc(100% - ${sidebarWidth}px)`;
   }
 
   private updateToggleIcon(): void {
     const buttonContainer = document.getElementById('monarch-sidenav-button-container');
     if (buttonContainer) {
-      // Re-render the button with updated icon
       const toggleButton = React.createElement(DefaultButton, {
         id: 'monarch-sidenav-toggle',
         'aria-label': 'Toggle Navigation',
         onClick: this.handleToggle,
-        iconProps: { iconName: this.state.isOpen ? 'Pin' : 'Search' },
+        iconProps: { iconName: this.state.isOpen ? 'ChromeBack' : 'GlobalNavButton' },
         styles: {
           root: {
             minWidth: '47px',
@@ -496,65 +771,48 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
       }
     }
 
-    // Update icon
+    // Update icon and apply theme
     this.updateToggleIcon();
+    this.applyTheme(this.state.navigationConfig.theme);
   }
 
   private handleToggle = (): void => {
     const newIsOpen = !this.state.isOpen;
     this.setState({ isOpen: newIsOpen }, () => {
-      // Save state to cache
       this.saveToggleState(newIsOpen);
-      // Apply the visual changes
       this.applyToggleState(newIsOpen);
     });
   };
 
-  private handleSettings = (): void => {
-    console.log('MonarchSideNav: Settings clicked');
-    // You can add settings functionality here
-    alert('Settings functionality can be added here!');
-  };
-
   private cleanup(): void {
-    // Clear search timeout
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout);
     }
 
-    // Remove event listeners
-    const toggleButton = document.getElementById('monarch-sidenav-toggle');
-    const closeButton = document.getElementById('monarch-sidebar-close');
-    const settingsButton = document.getElementById('monarch-sidebar-settings');
-    const searchInput = document.getElementById('document-search-input');
+    // Remove event listeners and elements
+    const elements = [
+      'monarch-sidenav-toggle',
+      'monarch-sidebar-close',
+      'monarch-sidebar-settings',
+      'monarch-sidebar-edit',
+      'navigation-search-input'
+    ];
     
-    if (toggleButton) {
-      toggleButton.removeEventListener('click', this.handleToggle);
-    }
-    
-    if (closeButton) {
-      closeButton.removeEventListener('click', this.handleToggle);
-    }
+    elements.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.removeEventListener('click', this.handleToggle);
+        element.removeEventListener('click', this.handleThemeSettings);
+        element.removeEventListener('click', this.handleEditMode);
+        element.removeEventListener('input', this.handleSearchInput);
+      }
+    });
 
-    if (settingsButton) {
-      settingsButton.removeEventListener('click', this.handleSettings);
-    }
-
-    if (searchInput) {
-      searchInput.removeEventListener('input', this.handleSearchInput);
-    }
-
-    // Remove injected elements
     const buttonContainer = document.getElementById('monarch-sidenav-button-container');
     const sidebarContainer = document.getElementById('monarch-sidenav-sidebar-container');
     
-    if (buttonContainer) {
-      buttonContainer.remove();
-    }
-    
-    if (sidebarContainer) {
-      sidebarContainer.remove();
-    }
+    if (buttonContainer) buttonContainer.remove();
+    if (sidebarContainer) sidebarContainer.remove();
     
     // Reset SPPageChrome styles
     const spPageChrome = document.getElementById('SPPageChrome');
@@ -563,14 +821,9 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
       spPageChrome.style.width = '';
     }
 
-    // Clear cached state
     this.clearToggleState();
   }
 
-  /**
-   * Saves the toggle state to browser localStorage with expiry
-   * @param isOpen - The current toggle state
-   */
   private saveToggleState(isOpen: boolean): void {
     try {
       const expiryTime = new Date().getTime() + (this.CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
@@ -581,88 +834,49 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
       };
       localStorage.setItem(this.CACHE_KEY, JSON.stringify(cacheData));
     } catch (error) {
-      console.warn('MonarchSideNav: Failed to save toggle state to cache:', error);
+      console.warn('MonarchSidebarNav: Failed to save toggle state to cache:', error);
     }
   }
 
-  /**
-   * Loads the toggle state from browser localStorage
-   * @returns The cached toggle state or false if not found/expired
-   */
   private loadToggleState(): boolean {
     try {
       const cachedData = localStorage.getItem(this.CACHE_KEY);
       if (!cachedData) {
-        return false; // Default state
+        return false;
       }
 
       const parsedData = JSON.parse(cachedData);
       const currentTime = new Date().getTime();
 
-      // Check if cache has expired
       if (currentTime > parsedData.expiry) {
         localStorage.removeItem(this.CACHE_KEY);
-        console.log('MonarchSideNav: Cache expired (after 1 year), using default state');
-        return false; // Default state for expired cache
+        console.log('MonarchSidebarNav: Cache expired (after 1 year), using default state');
+        return false;
       }
 
-      console.log('MonarchSideNav: Loaded cached state:', parsedData.value);
+      console.log('MonarchSidebarNav: Loaded cached state:', parsedData.value);
       return parsedData.value;
     } catch (error) {
-      console.warn('MonarchSideNav: Failed to load toggle state from cache:', error);
-      return false; // Default state on error
+      console.warn('MonarchSidebarNav: Failed to load toggle state from cache:', error);
+      return false;
     }
   }
 
-  /**
-   * Clears the cached toggle state from localStorage
-   */
   private clearToggleState(): void {
     try {
       localStorage.removeItem(this.CACHE_KEY);
-      console.log('MonarchSideNav: Cache cleared');
+      console.log('MonarchSidebarNav: Cache cleared');
     } catch (error) {
-      console.warn('MonarchSideNav: Failed to clear toggle state cache:', error);
+      console.warn('MonarchSidebarNav: Failed to clear toggle state cache:', error);
     }
   }
 
-  /**
-   * Gets information about the current cache state
-   * @returns Object with cache information or undefined if no cache exists
-   */
-  public getCacheInfo(): { value: boolean; expiry: Date; hoursRemaining: number } | undefined {
-    try {
-      const cachedData = localStorage.getItem(this.CACHE_KEY);
-      if (!cachedData) {
-        return undefined;
-      }
-
-      const parsedData = JSON.parse(cachedData);
-      const currentTime = new Date().getTime();
-      const hoursRemaining = Math.max(0, (parsedData.expiry - currentTime) / (1000 * 60 * 60));
-
-      return {
-        value: parsedData.value,
-        expiry: new Date(parsedData.expiry),
-        hoursRemaining: Math.round(hoursRemaining * 100) / 100
-      };
-    } catch (error) {
-      console.warn('MonarchSideNav: Failed to get cache info:', error);
-      return undefined;
-    }
-  }
-
-  /**
-   * Ensures the SharePoint content is properly adjusted
-   * @param isOpen - Whether sidebar should be open
-   */
   private ensureContentAdjustment(isOpen: boolean): void {
     const spPageChrome = document.getElementById('SPPageChrome');
     const buttonContainer = document.getElementById('monarch-sidenav-button-container');
     
     if (!spPageChrome) {
-      console.warn('MonarchSideNav: SPPageChrome not found, retrying...');
-      // Retry after another delay if SPPageChrome not found
+      console.warn('MonarchSidebarNav: SPPageChrome not found, retrying...');
       setTimeout(() => {
         this.ensureContentAdjustment(isOpen);
       }, 500);
@@ -673,29 +887,113 @@ export default class MonarchSidenavSearchToggler extends React.Component<IMonarc
     const contentWidth = this.getContentWidth();
 
     if (isOpen) {
-      console.log('MonarchSideNav: Adjusting content for open state', { sidebarWidth, contentWidth });
+      console.log('MonarchSidebarNav: Adjusting content for open state', { sidebarWidth, contentWidth });
       spPageChrome.style.marginLeft = sidebarWidth;
       spPageChrome.style.width = contentWidth;
       spPageChrome.style.transition = 'margin-left 0.3s ease, width 0.3s ease';
       
-      // Move button
       if (buttonContainer) {
         buttonContainer.style.left = sidebarWidth;
       }
     } else {
-      console.log('MonarchSideNav: Resetting content for closed state');
+      console.log('MonarchSidebarNav: Resetting content for closed state');
       spPageChrome.style.marginLeft = '0px';
       spPageChrome.style.width = '100%';
       spPageChrome.style.transition = 'margin-left 0.3s ease, width 0.3s ease';
       
-      // Reset button
       if (buttonContainer) {
         buttonContainer.style.left = '0px';
       }
     }
   }
 
-  public render(): React.ReactElement<IMonarchSidenavSearchTogglerProps> {
-    return <div style={{ display: 'none' }} />;
+  private makeToggleButtonDraggable(): void {
+    const buttonContainer = document.getElementById('monarch-sidenav-button-container');
+    if (!buttonContainer) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startTop = 0;
+
+    // Restore position from localStorage
+    const savedTop = localStorage.getItem('monarch-sidenav-toggle-top');
+    if (savedTop) {
+      buttonContainer.style.top = savedTop;
+    }
+
+    const onMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      startY = e.clientY;
+      startTop = parseInt(buttonContainer.style.top || '20', 10);
+      document.body.style.userSelect = 'none';
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const deltaY = e.clientY - startY;
+      let newTop = startTop + deltaY;
+      // Clamp to viewport
+      newTop = Math.max(0, Math.min(window.innerHeight - 48, newTop));
+      buttonContainer.style.top = `${newTop}px`;
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        localStorage.setItem('monarch-sidenav-toggle-top', buttonContainer.style.top);
+        document.body.style.userSelect = '';
+      }
+    };
+
+    buttonContainer.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   }
+
+  private initializeIsExpanded(items: INavigationItem[]): void {
+    for (const item of items) {
+      if (item.children && item.children.length > 0) {
+        if (typeof item.isExpanded !== 'boolean') {
+          item.isExpanded = false;
+        }
+        this.initializeIsExpanded(item.children);
+      }
+    }
+  }
+
+  public render(): React.ReactElement<INavigationProps> {
+    const { modalState, navigationConfig } = this.state;
+    
+    return (
+      <div style={{ display: 'none' }}>
+        <NavigationConfigModal
+          isVisible={modalState.isVisible && (modalState.mode === 'add' || modalState.mode === 'edit')}
+          mode={modalState.mode as 'add' | 'edit'}
+          item={modalState.editingItem}
+          parentOptions={this.getParentOptions()}
+          onSave={this.handleNavigationModalSave}
+          onCancel={this.handleNavigationModalCancel}
+        />
+        
+        <ThemeConfigModal
+          isVisible={modalState.isVisible && modalState.mode === 'theme'}
+          theme={navigationConfig.theme}
+          onSave={this.handleThemeModalSave}
+          onCancel={this.handleThemeModalCancel}
+          onReset={this.handleThemeModalReset}
+        />
+      </div>
+    );
+  }
+}
+
+// Legacy interface exports for compatibility
+export interface IMonarchSidenavSearchTogglerProps extends INavigationProps {}
+export interface ISearchResult {
+  Title: string;
+  Path: string;
+  FileType: string;
+  LastModifiedTime: string;
+  Author: string;
+  HitHighlightedSummary: string;
 }

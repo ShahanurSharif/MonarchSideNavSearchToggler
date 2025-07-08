@@ -1,0 +1,128 @@
+import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
+
+export interface INavigationItem {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  target?: '_blank' | '_self';
+  children?: INavigationItem[];
+  isExpanded?: boolean;
+  order: number;
+}
+
+export interface IThemeConfig {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  hoverColor: string;
+  fontFamily: string;
+  fontSize: string;
+  borderRadius: string;
+  sidebarWidth: string;
+  // Note: No logo configuration as per requirements
+}
+
+export interface ISidebarNavConfig {
+  version: string;
+  navigation: INavigationItem[];
+  theme: IThemeConfig;
+  searchEnabled: boolean;
+  autoSave: boolean;
+  lastModified: string;
+  createdBy: string;
+  modifiedBy: string;
+}
+
+export interface IModalState {
+  isVisible: boolean;
+  mode: 'add' | 'edit' | 'theme' | 'settings';
+  editingItem?: INavigationItem;
+  parentId?: string;
+}
+
+export interface INavigationSearchResult {
+  item: INavigationItem;
+  matchType: 'title' | 'url';
+  highlightedTitle: string;
+  path: string[];
+}
+
+export interface IComponentState {
+  isOpen: boolean;
+  searchQuery: string;
+  searchResults: INavigationSearchResult[];
+  isSearching: boolean;
+  hasSearched: boolean;
+  navigationConfig: ISidebarNavConfig;
+  modalState: IModalState;
+  isConfigMode: boolean;
+  hasUnsavedChanges: boolean;
+}
+
+export interface INavigationProps {
+  description: string;
+  context: ApplicationCustomizerContext;
+}
+
+export const DefaultTheme: IThemeConfig = {
+  primaryColor: '#0078d4',
+  secondaryColor: '#106ebe',
+  backgroundColor: '#ffffff',
+  textColor: '#323130',
+  hoverColor: '#f3f2f1',
+  fontFamily: 'Segoe UI, system-ui, sans-serif',
+  fontSize: '14px',
+  borderRadius: '4px',
+  sidebarWidth: '300px'
+};
+
+export const DefaultNavigationConfig: ISidebarNavConfig = {
+  version: '1.0.0',
+  navigation: [
+    {
+      id: 'home',
+      title: 'Home',
+      url: '/',
+      target: '_self',
+      order: 1
+    },
+    {
+      id: 'documents',
+      title: 'Documents',
+      url: '/documents',
+      target: '_self',
+      order: 2,
+      children: [
+        {
+          id: 'policies',
+          title: 'Policies',
+          url: '/documents/policies',
+          target: '_self',
+          order: 1
+        },
+        {
+          id: 'procedures',
+          title: 'Procedures',
+          url: '/documents/procedures',
+          target: '_self',
+          order: 2
+        }
+      ]
+    },
+    {
+      id: 'resources',
+      title: 'Resources',
+      url: '/resources',
+      target: '_self',
+      order: 3
+    }
+  ],
+  theme: DefaultTheme,
+  searchEnabled: true,
+  autoSave: true,
+  lastModified: new Date().toISOString(),
+  createdBy: 'System',
+  modifiedBy: 'System'
+}; 

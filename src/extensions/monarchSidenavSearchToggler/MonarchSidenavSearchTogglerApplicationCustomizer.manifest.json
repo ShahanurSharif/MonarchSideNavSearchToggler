@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json",
 
   "id": "66f08679-1409-4558-a68f-be28642739c7",
-  "alias": "MonarchSidenavSearchTogglerApplicationCu",
+  "alias": "MonarchSidebarNavigationApplicationCustomizer",
   "componentType": "Extension",
   "extensionType": "ApplicationCustomizer",
 
@@ -13,5 +13,16 @@
   // If true, the component can only be installed on sites where Custom Script is allowed.
   // Components that allow authors to embed arbitrary script code should set this to true.
   // https://support.office.com/en-us/article/Turn-scripting-capabilities-on-or-off-1f2c515f-5d7e-448a-9fd7-835da935584f
-  "requiresCustomScript": false
+  "requiresCustomScript": false,
+  
+  "preconfiguredEntries": [{
+    "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+    "group": { "default": "Advanced" },
+    "title": { "default": "Monarch Sidebar Navigation" },
+    "description": { "default": "Hierarchical sidebar navigation with search functionality and theme customization" },
+    "officeFabricIconFontName": "Nav2DMapView",
+    "properties": {
+      "description": "Monarch Sidebar Navigation"
+    }
+  }]
 }

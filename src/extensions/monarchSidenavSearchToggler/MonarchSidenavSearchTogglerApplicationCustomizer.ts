@@ -2,34 +2,36 @@ import { Log } from '@microsoft/sp-core-library';
 import {
   BaseApplicationCustomizer
 } from '@microsoft/sp-application-base';
-// SPHttpClient import removed as it's not used in this file
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import MonarchSidenavSearchToggler from './MonarchSidenavSearchToggler';
 
 import * as strings from 'MonarchSidenavSearchTogglerApplicationCustomizerStrings';
 
-const LOG_SOURCE: string = 'MonarchSidenavSearchTogglerApplicationCustomizer';
+const LOG_SOURCE: string = 'MonarchSidebarNavigationApplicationCustomizer';
 
 /**
  * If your command set uses the ClientSideComponentProperties JSON input,
  * it will be deserialized into the BaseExtension.properties object.
  * You can define an interface to describe it.
  */
-export interface IMonarchSidenavSearchTogglerApplicationCustomizerProperties {
-  // This is an example; replace with your own property
-  testMessage: string;
+export interface IMonarchSidebarNavigationApplicationCustomizerProperties {
+  // Configuration properties for Monarch Sidebar Navigation
+  description: string;
 }
 
-/** A Custom Action which can be run during execution of a Client Side Application */
-export default class MonarchSidenavSearchTogglerApplicationCustomizer
-  extends BaseApplicationCustomizer<IMonarchSidenavSearchTogglerApplicationCustomizerProperties> {
+/** 
+ * Monarch Sidebar Navigation Application Customizer
+ * Provides hierarchical sidebar navigation with search functionality and theme customization
+ */
+export default class MonarchSidebarNavigationApplicationCustomizer
+  extends BaseApplicationCustomizer<IMonarchSidebarNavigationApplicationCustomizerProperties> {
 
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
 
-    // Create a container div for the React component with fixed positioning
-    const customNavId = 'monarch-sidenav-search-toggler-root';
+    // Create a container div for the React component
+    const customNavId = 'monarch-sidebar-navigation-root';
     let container = document.getElementById(customNavId);
     if (!container) {
       container = document.createElement('div');
@@ -39,7 +41,7 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
 
     ReactDOM.render(
       React.createElement(MonarchSidenavSearchToggler, { 
-        description: 'Monarch Side Navigation Toggler',
+        description: this.properties.description || 'Monarch Sidebar Navigation',
         context: this.context
       }),
       container
@@ -49,7 +51,7 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
   }
 
   public onDispose(): void {
-    const customNavId = 'monarch-sidenav-search-toggler-root';
+    const customNavId = 'monarch-sidebar-navigation-root';
     const container = document.getElementById(customNavId);
     if (container) {
       ReactDOM.unmountComponentAtNode(container);
@@ -57,3 +59,7 @@ export default class MonarchSidenavSearchTogglerApplicationCustomizer
     }
   }
 }
+
+// Legacy interface exports for compatibility
+export interface IMonarchSidenavSearchTogglerApplicationCustomizerProperties extends IMonarchSidebarNavigationApplicationCustomizerProperties {}
+export { MonarchSidebarNavigationApplicationCustomizer as MonarchSidenavSearchTogglerApplicationCustomizer };
