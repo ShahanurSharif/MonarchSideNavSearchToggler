@@ -12,6 +12,7 @@ export interface NavItem {
   url: string;
   order: number;
   children?: NavItem[];
+  openIn?: string;
 }
 
 export interface INavigationConfigModalProps {
@@ -60,10 +61,53 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     }
   }
 
+  // Returns true if the modal is in "add child" mode
+  private isChildForm(): boolean {
+    return this.props.mode === 'add' && !!this.state.parentId;
+  }
+
+  // Returns true if the current item is a root-level parent and can have children added
+  private canAddChild(): boolean {
+    const { mode, item, parentOptions } = this.props;
+    // Only show for root-level items (item.id in parentOptions) and not for children
+    return (
+      mode === 'edit' &&
+      !!item &&
+      parentOptions.some(opt => String(opt.key) === String(item.id)) &&
+      (!item.children || Array.isArray(item.children)) &&
+      !this.state.parentId // Don't show if already in child add mode
+    );
+  }
+
+  // Switches the modal to "add child" mode for the current parent
+  private onAddChild = (): void => {
+    const parentId = this.props.item?.id;
+    if (parentId) {
+      this.setState({
+        formData: {
+          id: '',
+          title: '',
+          url: '',
+          order: 1,
+          openIn: 'same' // Ensure openIn is set for new child
+        },
+        parentId,
+        errors: {},
+        isValid: false
+      }, this.validateForm); // Validate form after switching to child mode
+    }
+  };
+
   public render(): React.ReactElement<INavigationConfigModalProps> {
     const { isVisible, mode, onCancel } = this.props;
     const { formData, errors, isValid } = this.state;
-    const title = mode === 'add' ? 'Add Navigation Item' : 'Edit Navigation Item';
+    const title = mode === 'add' ? 'Add Navigation' : 'Edit Navigation';
+    const showAddChild = this.canAddChild() && !this.isChildForm();
+    const openInOptions = [
+      { key: 'same', text: 'Same tab (default)' },
+      { key: 'new', text: 'New tab' }
+    ];
+    const openIn = this.state.formData.openIn || 'same';
 
     return (
       <Modal
@@ -75,17 +119,27 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       >
         <div className={styles.modalHeader}>
           <h2>{title}</h2>
-          <DefaultButton 
-            iconProps={{ iconName: 'Cancel' }}
-            onClick={onCancel}
-            className={styles.modalCloseBtn}
-            ariaLabel="Close modal"
-          />
+          {/* Remove the close button icon and replace with Add Child button if applicable */}
+          {showAddChild && (
+            <button
+              style={{
+                backgroundColor: '#f3f2f1',
+                color: '#323130',
+                border: '1px solid #d2d0ce',
+                borderRadius: 2,
+                padding: '4px 12px',
+                fontSize: 12,
+                cursor: 'pointer',
+                fontWeight: 400
+              }}
+              onClick={this.onAddChild}
+              title="Add a child item to this navigation"
+            >
+              📁 Add Child
+            </button>
+          )}
         </div>
-
         <div className={styles.modalContent}>
-          {/* Remove the MessageBar for errors since we have inline validation */}
-
           <div className={styles.formSection}>
             <TextField
               label="Title"
@@ -95,7 +149,6 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
               placeholder="Enter navigation item title"
               errorMessage={errors.title}
             />
-
             <TextField
               label="URL"
               value={formData.url}
@@ -104,29 +157,23 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
               placeholder="https://example.com or /relative/path"
               errorMessage={errors.url}
             />
-
-
-
-            <TextField
-              label="Order"
-              type="number"
-              value={formData.order.toString()}
-              onChange={this.onOrderChange}
-              required
-              min={1}
-              max={999}
-              placeholder="1"
-              description="Lower numbers appear first"
-              errorMessage={errors.order}
-            />
-
-            {/* Remove Parent Item dropdown and related logic */}
-            {/* Only allow adding a child to a parent (not to a child) */}
-            {/* Enforce only one child per parent */}
-            {/* Update modal UI to reflect this */}
+            {/* Open In Dropdown */}
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontWeight: 500, marginBottom: 4, display: 'block' }}>Open in:</label>
+              <select
+                value={openIn}
+                onChange={e => this.setState(prev => ({
+                  formData: { ...prev.formData, openIn: e.target.value }
+                }), this.validateForm)}
+                style={{ width: '100%', padding: 6, borderRadius: 2, border: '1px solid #d2d0ce' }}
+              >
+                {openInOptions.map(opt => (
+                  <option key={opt.key} value={opt.key}>{opt.text}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-
         <div className={styles.modalFooter}>
           <PrimaryButton
             text={mode === 'add' ? 'Add Item' : 'Save Changes'}
@@ -151,7 +198,8 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       id: '',
       title: '',
       url: '',
-      order: 1
+      order: 1,
+      openIn: 'same'
     };
   }
 
@@ -173,20 +221,6 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     }), this.validateForm);
   };
 
-
-
-  private onOrderChange = (event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string): void => {
-    const order = parseInt(newValue || '1', 10);
-    this.setState(prevState => ({
-      formData: {
-        ...prevState.formData,
-        order: isNaN(order) ? 1 : order
-      }
-    }), this.validateForm);
-  };
-
-
-
   private validateForm = (): void => {
     const { formData } = this.state;
     const errors: { [key: string]: string } = {};
@@ -207,11 +241,6 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       if (!this.isValidUrl(url) && !this.isValidRelativePath(url)) {
         errors.url = 'Please enter a valid URL (https://...) or relative path (/path)';
       }
-    }
-
-    // Validate order
-    if (formData.order < 1 || formData.order > 999) {
-      errors.order = 'Order must be between 1 and 999';
     }
 
     const isValid = Object.keys(errors).length === 0;
@@ -247,4 +276,4 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       this.props.onSave(formData, parentId || undefined);
     }
   };
-} 
+}

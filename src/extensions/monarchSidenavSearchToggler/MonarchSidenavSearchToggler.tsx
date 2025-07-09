@@ -27,7 +27,10 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const [search, setSearch] = React.useState('');
   const [isConfig, setIsConfig] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(true);
-  const [toggleTop, setToggleTop] = React.useState(20);
+  const [toggleTop, setToggleTop] = React.useState<number>(() => {
+    const configService = new ConfigurationService(context);
+    return configService.getTogglerPosition();
+  });
   const [modalState, setModalState] = React.useState<{
     isVisible: boolean;
     mode: 'add' | 'edit';
@@ -47,12 +50,11 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     try {
       setIsLoading(true);
       const config = await configService.loadConfiguration();
-      
       setNav(config.items);
       setIsOpen(config.sidebar.isOpen);
       setIsPinned(config.sidebar.isPinned);
-      setToggleTop(config.sidebar.togglePosition.top);
       setSidebarWidth(config.sidebar.width);
+      // Do NOT set toggleTop from config.sidebar.togglePosition
     } catch (error) {
       console.error('Failed to load configuration:', error);
       // Use default values if loading fails
@@ -87,20 +89,17 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         nav,
         sidebarWidth,
         isPinned,
-        isOpen,
-        toggleTop
+        isOpen
       });
-      
       const config: Partial<SidebarConfig> = {
         items: nav,
         sidebar: {
           width: sidebarWidth,
           isPinned,
           isOpen,
-          togglePosition: { top: toggleTop }
+          togglePosition: { top: configService.getTogglerPosition() }
         }
       };
-      
       const success = await configService.saveConfiguration(config);
       if (success) {
         console.log('✅ Configuration saved successfully');
@@ -160,24 +159,48 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     return options;
   };
 
+  // Move saveConfigurationWithNav above all usages
+  const saveConfigurationWithNav = async (navArray: NavItem[]): Promise<void> => {
+    try {
+      const config: Partial<SidebarConfig> = {
+        items: navArray,
+        sidebar: {
+          width: sidebarWidth,
+          isPinned,
+          isOpen,
+          togglePosition: { top: configService.getTogglerPosition() }
+        }
+      };
+      const success = await configService.saveConfiguration(config);
+      if (success) {
+        console.log('✅ Configuration saved successfully');
+      } else {
+        console.error('❌ Configuration save returned false');
+      }
+    } catch (error) {
+      console.error('❌ Failed to save configuration:', error);
+    }
+  };
+
   // Handlers for config mode
   const handleEdit = (id: string): void => {
     const item = findItemById(nav, id);
     if (item) setModalState({ isVisible: true, mode: 'edit', editingItem: item });
   };
   const handleDelete = (id: string): void => {
-    // Remove item by id
-    const removeRecursive = (items: NavItem[]): NavItem[] =>
-      items.filter(item => {
-        if (item.id === id) return false;
-        if (item.children) item.children = removeRecursive(item.children);
-        return true;
+    setNav(prevNav => {
+      const removeRecursive = (items: NavItem[]): NavItem[] =>
+        items.filter(item => {
+          if (item.id === id) return false;
+          if (item.children) item.children = removeRecursive(item.children);
+          return true;
+        });
+      const updatedNav = removeRecursive(prevNav);
+      // Auto-save with the latest nav array
+      saveConfigurationWithNav(updatedNav).catch(error => {
+        console.error('Failed to save configuration:', error);
       });
-    const updatedNav = removeRecursive(nav);
-    setNav(updatedNav);
-    // Auto-save when item is deleted
-    saveConfiguration().catch(error => {
-      console.error('Failed to save configuration:', error);
+      return updatedNav;
     });
   };
   const handleAddChild = (parentId: string): void => setModalState({ isVisible: true, mode: 'add', parentId });
@@ -185,42 +208,38 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
 
   // Modal save/cancel
   const handleModalSave = (item: NavItem, parentId?: string): void => {
-    // Always ensure order and url are set
     if (!item.order) item.order = 1;
     if (!item.url) item.url = '';
-    let updatedNav: NavItem[];
-    
-    if (modalState.mode === 'edit' && item.id) {
-      // Update existing item
-      const updateRecursive = (items: NavItem[]): NavItem[] =>
-        items.map(it =>
-          it.id === item.id
-            ? { ...item, children: it.children, url: item.url || '' }
-            : { ...it, children: it.children ? updateRecursive(it.children) : undefined }
-        );
-      updatedNav = updateRecursive(nav);
-    } else {
-      // Add new item
-      const newItem = { ...item, children: [], order: item.order || 1, url: item.url || '' };
-      if (parentId) {
-        const addChildRecursive = (items: NavItem[]): NavItem[] =>
+    setNav(prevNav => {
+      let updatedNav: NavItem[];
+      if (modalState.mode === 'edit' && item.id) {
+        const updateRecursive = (items: NavItem[]): NavItem[] =>
           items.map(it =>
-            it.id === parentId
-              ? { ...it, children: [...(it.children || []), { ...newItem, order: (it.children?.length || 0) + 1 }] }
-              : { ...it, children: it.children ? addChildRecursive(it.children) : undefined }
+            it.id === item.id
+              ? { ...item, children: it.children, url: item.url || '' }
+              : { ...it, children: it.children ? updateRecursive(it.children) : undefined }
           );
-        updatedNav = addChildRecursive(nav);
+        updatedNav = updateRecursive(prevNav);
       } else {
-        updatedNav = [...nav, { ...newItem, order: nav.length + 1 }];
+        const newItem = { ...item, children: [], order: item.order || 1, url: item.url || '' };
+        if (parentId) {
+          const addChildRecursive = (items: NavItem[]): NavItem[] =>
+            items.map(it =>
+              it.id === parentId
+                ? { ...it, children: [...(it.children || []), { ...newItem, order: (it.children?.length || 0) + 1 }] }
+                : { ...it, children: it.children ? addChildRecursive(it.children) : undefined }
+            );
+          updatedNav = addChildRecursive(prevNav);
+        } else {
+          updatedNav = [...prevNav, { ...newItem, order: prevNav.length + 1 }];
+        }
       }
-    }
-    
-    setNav(updatedNav);
-    setModalState({ ...modalState, isVisible: false });
-    
-    // Auto-save when item is added/edited
-    saveConfiguration().catch(error => {
-      console.error('Failed to save configuration:', error);
+      setModalState({ ...modalState, isVisible: false });
+      // Auto-save with the latest nav array
+      saveConfigurationWithNav(updatedNav).catch(error => {
+        console.error('Failed to save configuration:', error);
+      });
+      return updatedNav;
     });
   };
   const handleModalCancel = (): void => setModalState({ ...modalState, isVisible: false });
@@ -256,7 +275,6 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         onToggle={() => {
           setIsOpen(open => {
             const newOpen = !open;
-            // Auto-save open state
             setTimeout(() => {
               saveConfiguration().catch(error => {
                 console.error('Failed to save configuration:', error);
@@ -267,12 +285,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         }}
         onDrag={(newTop) => {
           setToggleTop(newTop);
-          // Auto-save toggle position
-          setTimeout(() => {
-            saveConfiguration().catch(error => {
-              console.error('Failed to save configuration:', error);
-            });
-          }, 100);
+          configService.setTogglerPosition(newTop); // Store in localStorage only
         }}
         sidebarWidth={sidebarWidth}
       />

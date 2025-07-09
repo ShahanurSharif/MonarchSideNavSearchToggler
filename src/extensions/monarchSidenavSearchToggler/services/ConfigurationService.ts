@@ -121,9 +121,16 @@ export class ConfigurationService {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
       const serverRelativeUrl = `${this.context.pageContext.web.serverRelativeUrl.replace(/\/$/, '')}/SiteAssets`;
       const uploadUrl = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${serverRelativeUrl}')/Files/add(overwrite=true,url='${ConfigurationService.CONFIG_FILE_NAME}')`;
+      // Always include togglePosition from localStorage
+      const toggleTop = this.getTogglerPosition();
       const configToSave: SidebarConfig = {
         ...FALLBACK_CONFIG,
         ...config,
+        sidebar: {
+          ...FALLBACK_CONFIG.sidebar,
+          ...config.sidebar,
+          togglePosition: { top: toggleTop }
+        },
         lastModified: new Date().toISOString(),
         modifiedBy: this.context.pageContext.user.displayName || 'Unknown'
       };
@@ -156,4 +163,28 @@ export class ConfigurationService {
       return false;
     }
   }
-} 
+
+  /**
+   * Gets the sidebar toggler position from localStorage
+   */
+  public getTogglerPosition(): number {
+    try {
+      const stored = localStorage.getItem('monarch-sidebar-toggler-position');
+      return stored ? parseInt(stored, 10) : 20;
+    } catch (error) {
+      console.warn('[ConfigurationService] Failed to get toggler position from localStorage:', error);
+      return 20;
+    }
+  }
+
+  /**
+   * Sets the sidebar toggler position in localStorage
+   */
+  public setTogglerPosition(position: number): void {
+    try {
+      localStorage.setItem('monarch-sidebar-toggler-position', String(position));
+    } catch (error) {
+      console.warn('[ConfigurationService] Failed to set toggler position in localStorage:', error);
+    }
+  }
+}

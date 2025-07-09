@@ -190,27 +190,26 @@ export class NavigationConfigService {
   }
 
   /**
-   * Removes a navigation item by ID
+   * Removes a navigation item by ID (immutable, monarchNav convention)
    */
   public removeNavigationItem(config: ISidebarNavConfig, id: string): boolean {
     try {
-      const removeRecursive = (items: INavigationItem[]): boolean => {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].id === id) {
-            items.splice(i, 1);
-            return true;
-          }
-          
-          if (items[i].children) {
-            if (removeRecursive(items[i].children!)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      return removeRecursive(config.navigation);
+      // Recursively filter out the item with the given id
+      const removeRecursive = (items: INavigationItem[]): INavigationItem[] =>
+        items
+          .filter(item => item.id !== id)
+          .map(item => ({
+            ...item,
+            children: item.children ? removeRecursive(item.children) : undefined
+          }));
+      const newNavigation = removeRecursive(config.navigation);
+      // Only update if something was actually removed
+      if (newNavigation.length !== config.navigation.length ||
+          JSON.stringify(newNavigation) !== JSON.stringify(config.navigation)) {
+        config.navigation = newNavigation;
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('MonarchSidebarNav: Error removing navigation item:', error);
       return false;
@@ -267,6 +266,29 @@ export class NavigationConfigService {
     }
     console.error('MonarchSidebarNav: Failed to remove and save navigation item');
     return false;
+  }
+
+  /**
+   * Gets the sidebar toggler position from localStorage
+   */
+  public getTogglerPosition(): string | undefined {
+    try {
+      return localStorage.getItem('monarch-sidebar-toggler-position') || undefined;
+    } catch (error) {
+      console.warn('MonarchSidebarNav: Failed to get toggler position from localStorage:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Sets the sidebar toggler position in localStorage
+   */
+  public setTogglerPosition(position: string): void {
+    try {
+      localStorage.setItem('monarch-sidebar-toggler-position', position);
+    } catch (error) {
+      console.warn('MonarchSidebarNav: Failed to set toggler position in localStorage:', error);
+    }
   }
 
   private async loadFromSharePoint(): Promise<ISidebarNavConfig | undefined> {
