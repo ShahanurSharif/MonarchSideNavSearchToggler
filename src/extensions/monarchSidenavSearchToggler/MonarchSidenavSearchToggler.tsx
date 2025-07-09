@@ -169,21 +169,18 @@ export default function MonarchSidenavSearchToggler() {
         }}
       >
         <div className={styles.sidebar}>
-          {/* Pin/Unpin Button at the top */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 12px 0 0' }}>
-            <button
-              className={styles.headerButton}
-              aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-              title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-              onClick={() => setIsPinned(pin => !pin)}
-              style={{ marginRight: 0 }}
-            >
-              <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
-            </button>
-          </div>
           <div className={styles.sidebarHeader}>
             <h2 className={styles.sidebarTitle}>Navigation</h2>
             <div className={styles.headerButtons}>
+              <button
+                className={styles.headerButton}
+                aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                onClick={() => setIsPinned(pin => !pin)}
+                style={{ marginRight: 8 }}
+              >
+                <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
+              </button>
               {isConfig && (
                 <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
                   <Icon iconName="Add" />
