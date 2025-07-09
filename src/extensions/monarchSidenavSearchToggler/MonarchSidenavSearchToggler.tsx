@@ -41,6 +41,33 @@ export default function MonarchSidenavSearchToggler() {
     editingItem?: NavItem;
     parentId?: string;
   }>({ isVisible: false, mode: 'add' });
+  const sidebarWidth = 300;
+  const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
+
+  const [isPinned, setIsPinned] = React.useState(false);
+
+  // Push effect for pinned sidebar
+  React.useEffect(() => {
+    const spPageChrome = document.getElementById('SPPageChrome');
+    if (spPageChrome) {
+      if (isOpen && isPinned) {
+        spPageChrome.style.marginLeft = `${sidebarWidth}px`;
+        spPageChrome.style.width = `calc(100% - ${sidebarWidth}px)`;
+        spPageChrome.style.transition = 'margin-left 0.3s, width 0.3s';
+      } else {
+        spPageChrome.style.marginLeft = '0px';
+        spPageChrome.style.width = '100%';
+        spPageChrome.style.transition = 'margin-left 0.3s, width 0.3s';
+      }
+    }
+    return () => {
+      if (spPageChrome) {
+        spPageChrome.style.marginLeft = '';
+        spPageChrome.style.width = '';
+        spPageChrome.style.transition = '';
+      }
+    };
+  }, [isOpen, isPinned, sidebarWidth]);
 
   // Utility to find an item by id
   const findItemById = (items: NavItem[], id: string): NavItem | undefined => {
@@ -118,9 +145,6 @@ export default function MonarchSidenavSearchToggler() {
   };
   const handleModalCancel = () => setModalState({ ...modalState, isVisible: false });
 
-  const sidebarWidth = 300;
-  const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
-
   return (
     <>
       <SidebarToggleButton
@@ -145,7 +169,20 @@ export default function MonarchSidenavSearchToggler() {
         }}
       >
         <div className={styles.sidebar}>
+          {/* Pin/Unpin Button at the top */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 12px 0 0' }}>
+            <button
+              className={styles.headerButton}
+              aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              onClick={() => setIsPinned(pin => !pin)}
+              style={{ marginRight: 0 }}
+            >
+              <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
+            </button>
+          </div>
           <div className={styles.sidebarHeader}>
+            <h2 className={styles.sidebarTitle}>Navigation</h2>
             <div className={styles.headerButtons}>
               {isConfig && (
                 <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
