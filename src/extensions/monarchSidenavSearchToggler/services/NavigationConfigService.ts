@@ -142,31 +142,26 @@ export class NavigationConfigService {
   }
 
   /**
-   * Adds a new navigation item
+   * Adds a new navigation item (immutable, monarchNav convention)
    */
   public addNavigationItem(config: ISidebarNavConfig, newItem: INavigationItem, parentId?: string): boolean {
     try {
-      // Generate unique ID if not provided
       if (!newItem.id) {
         newItem.id = this.generateUniqueId(config.navigation);
       }
-
       if (parentId) {
-        // Add to parent's children
-        const parent = this.findNavigationItemById(config.navigation, parentId);
-        if (parent) {
-          if (!parent.children) {
-            parent.children = [];
-          }
-          parent.children.push(newItem);
-          parent.children.sort((a, b) => a.order - b.order);
-          return true;
-        }
-        return false;
+        // Add to parent's children immutably
+        const updateChildren = (items: INavigationItem[]): INavigationItem[] =>
+          items.map(item =>
+            item.id === parentId
+              ? { ...item, children: [...(item.children || []), newItem].sort((a, b) => a.order - b.order) }
+              : { ...item, children: item.children ? updateChildren(item.children) : undefined }
+          );
+        config.navigation = updateChildren(config.navigation);
+        return true;
       } else {
-        // Add to root level
-        config.navigation.push(newItem);
-        config.navigation.sort((a, b) => a.order - b.order);
+        // Add to root level immutably
+        config.navigation = [...config.navigation, newItem].sort((a, b) => a.order - b.order);
         return true;
       }
     } catch (error) {
@@ -176,27 +171,18 @@ export class NavigationConfigService {
   }
 
   /**
-   * Updates an existing navigation item
+   * Updates an existing navigation item (immutable, monarchNav convention)
    */
   public updateNavigationItem(config: ISidebarNavConfig, updatedItem: INavigationItem): boolean {
     try {
-      const updateRecursive = (items: INavigationItem[]): boolean => {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].id === updatedItem.id) {
-            items[i] = { ...updatedItem };
-            return true;
-          }
-          
-          if (items[i].children) {
-            if (updateRecursive(items[i].children!)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      return updateRecursive(config.navigation);
+      const updateRecursive = (items: INavigationItem[]): INavigationItem[] =>
+        items.map(item =>
+          item.id === updatedItem.id
+            ? { ...updatedItem }
+            : { ...item, children: item.children ? updateRecursive(item.children) : undefined }
+        );
+      config.navigation = updateRecursive(config.navigation);
+      return true;
     } catch (error) {
       console.error('MonarchSidebarNav: Error updating navigation item:', error);
       return false;
@@ -229,6 +215,58 @@ export class NavigationConfigService {
       console.error('MonarchSidebarNav: Error removing navigation item:', error);
       return false;
     }
+  }
+
+  /**
+   * Adds a new navigation item and saves to SharePoint (monarchNav convention)
+   */
+  public async addAndSaveNavigationItem(newItem: INavigationItem, parentId?: string): Promise<boolean> {
+    // Always load the latest config from SharePoint
+    const config = await this.loadConfiguration();
+    const success = this.addNavigationItem(config, newItem, parentId);
+    if (success) {
+      const saved = await this.saveConfiguration(config);
+      if (saved) {
+        console.log('MonarchSidebarNav: Navigation item added and saved successfully');
+        return true;
+      }
+    }
+    console.error('MonarchSidebarNav: Failed to add and save navigation item');
+    return false;
+  }
+
+  /**
+   * Updates an existing navigation item and saves to SharePoint (monarchNav convention)
+   */
+  public async updateAndSaveNavigationItem(updatedItem: INavigationItem): Promise<boolean> {
+    const config = await this.loadConfiguration();
+    const success = this.updateNavigationItem(config, updatedItem);
+    if (success) {
+      const saved = await this.saveConfiguration(config);
+      if (saved) {
+        console.log('MonarchSidebarNav: Navigation item updated and saved successfully');
+        return true;
+      }
+    }
+    console.error('MonarchSidebarNav: Failed to update and save navigation item');
+    return false;
+  }
+
+  /**
+   * Removes a navigation item by ID and saves to SharePoint (monarchNav convention)
+   */
+  public async removeAndSaveNavigationItem(id: string): Promise<boolean> {
+    const config = await this.loadConfiguration();
+    const success = this.removeNavigationItem(config, id);
+    if (success) {
+      const saved = await this.saveConfiguration(config);
+      if (saved) {
+        console.log('MonarchSidebarNav: Navigation item removed and saved successfully');
+        return true;
+      }
+    }
+    console.error('MonarchSidebarNav: Failed to remove and save navigation item');
+    return false;
   }
 
   private async loadFromSharePoint(): Promise<ISidebarNavConfig | undefined> {
