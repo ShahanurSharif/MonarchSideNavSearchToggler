@@ -85,11 +85,12 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     if (parentId) {
       this.setState({
         formData: {
-          id: '',
+          id: `nav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           title: '',
           url: '',
           order: 1,
-          openIn: 'same' // Ensure openIn is set for new child
+          openIn: 'same',
+          children: []
         },
         parentId,
         errors: {},
@@ -192,14 +193,16 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
 
   private initializeFormData(): NavItem {
     if (this.props.mode === 'edit' && this.props.item) {
-      return { ...this.props.item };
+      // Always preserve children array for edit mode
+      return { ...this.props.item, children: this.props.item.children || [] };
     }
     return {
       id: '',
       title: '',
       url: '',
       order: 1,
-      openIn: 'same'
+      openIn: 'same',
+      children: []
     };
   }
 
@@ -267,13 +270,13 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
   private onSave = (): void => {
     if (this.state.isValid) {
       const { formData, parentId } = this.state;
-      
-      // Generate ID for new items
-      if (this.props.mode === 'add' && !formData.id) {
+      // Always ensure an id exists for both add and edit
+      if (!formData.id) {
         formData.id = `nav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       }
-
-      this.props.onSave(formData, parentId || undefined);
+      // Only pass parentId for add mode (never for edit)
+      const passParentId = this.props.mode === 'add' ? (parentId || undefined) : undefined;
+      this.props.onSave(formData, passParentId);
     }
   };
 }
