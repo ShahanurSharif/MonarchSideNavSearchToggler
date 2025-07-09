@@ -1,0 +1,52 @@
+{
+  "theme": {
+    "primaryColor": "#0078d4",
+    "secondaryColor": "#106ebe",
+    "backgroundColor": "#ffffff",
+    "textColor": "#323130",
+    "borderColor": "#edebe9",
+    "hoverColor": "#f3f2f1",
+    "activeColor": "#deecf9",
+    "shadowColor": "rgba(0,0,0,0.1)",
+    "fontFamily": "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    "fontSize": "14px",
+    "borderRadius": "4px",
+    "transitionDuration": "0.2s"
+  },
+  "items": [
+    {
+      "id": "documents",
+      "title": "Documents",
+      "url": "/documents",
+      "order": 1,
+      "children": [
+        {
+          "id": "policies",
+          "title": "Policies",
+          "url": "/documents/policies",
+          "order": 1
+        },
+        {
+          "id": "procedures",
+          "title": "Procedures",
+          "url": "/documents/procedures",
+          "order": 2
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "url": "/resources",
+      "order": 2
+    }
+  ],
+  "sidebar": {
+    "width": 300,
+    "isPinned": false,
+    "isOpen": true,
+    "togglePosition": {
+      "top": 20
+    }
+  }
+} 

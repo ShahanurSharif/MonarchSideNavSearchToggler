@@ -2,31 +2,36 @@ import * as React from 'react';
 import { Modal } from '@fluentui/react/lib/Modal';
 import { DefaultButton, PrimaryButton } from '@fluentui/react/lib/Button';
 import { TextField } from '@fluentui/react/lib/TextField';
-import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
-import { INavigationItem } from '../interfaces/INavigationInterfaces';
+import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import styles from '../MonarchSidenavSearchToggler.module.scss';
+
+// Use the same NavItem interface as the main component
+export interface NavItem {
+  id: string;
+  title: string;
+  url: string;
+  order: number;
+  children?: NavItem[];
+}
 
 export interface INavigationConfigModalProps {
   isVisible: boolean;
   mode: 'add' | 'edit';
-  item?: INavigationItem;
+  item?: NavItem;
   parentOptions: IDropdownOption[];
-  onSave: (item: INavigationItem, parentId?: string) => void;
+  onSave: (item: NavItem, parentId?: string) => void;
   onCancel: () => void;
 }
 
 export interface INavigationConfigModalState {
-  formData: INavigationItem;
+  formData: NavItem;
   parentId?: string;
   errors: { [key: string]: string };
   isValid: boolean;
 }
 
 export class NavigationConfigModal extends React.Component<INavigationConfigModalProps, INavigationConfigModalState> {
-  private readonly targetOptions: IDropdownOption[] = [
-    { key: '_self', text: 'Same Window (_self)' },
-    { key: '_blank', text: 'New Window (_blank)' }
-  ];
+
 
   constructor(props: INavigationConfigModalProps) {
     super(props);
@@ -100,13 +105,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
               errorMessage={errors.url}
             />
 
-            <Dropdown
-              label="Open In"
-              selectedKey={formData.target || '_self'}
-              onChange={this.onTargetChange}
-              options={this.targetOptions}
-              placeholder="Select target window"
-            />
+
 
             <TextField
               label="Order"
@@ -121,18 +120,10 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
               errorMessage={errors.order}
             />
 
-            {this.props.parentOptions.length > 0 && (
-              <Dropdown
-                label="Parent Item"
-                selectedKey={this.state.parentId}
-                onChange={this.onParentChange}
-                options={[
-                  { key: '', text: 'None (Root Level)' },
-                  ...this.props.parentOptions
-                ]}
-                placeholder="Select parent navigation item"
-              />
-            )}
+            {/* Remove Parent Item dropdown and related logic */}
+            {/* Only allow adding a child to a parent (not to a child) */}
+            {/* Enforce only one child per parent */}
+            {/* Update modal UI to reflect this */}
           </div>
         </div>
 
@@ -152,7 +143,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     );
   }
 
-  private initializeFormData(): INavigationItem {
+  private initializeFormData(): NavItem {
     if (this.props.mode === 'edit' && this.props.item) {
       return { ...this.props.item };
     }
@@ -160,7 +151,6 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       id: '',
       title: '',
       url: '',
-      target: '_self',
       order: 1
     };
   }
@@ -183,16 +173,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     }), this.validateForm);
   };
 
-  private onTargetChange = (event: React.FormEvent<HTMLDivElement>, option?: IDropdownOption): void => {
-    if (option) {
-      this.setState(prevState => ({
-        formData: {
-          ...prevState.formData,
-          target: option.key as '_blank' | '_self'
-        }
-      }));
-    }
-  };
+
 
   private onOrderChange = (event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string): void => {
     const order = parseInt(newValue || '1', 10);
@@ -204,11 +185,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     }), this.validateForm);
   };
 
-  private onParentChange = (event: React.FormEvent<HTMLDivElement>, option?: IDropdownOption): void => {
-    this.setState({
-      parentId: option?.key as string
-    });
-  };
+
 
   private validateForm = (): void => {
     const { formData } = this.state;
@@ -247,8 +224,8 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
 
   private isValidUrl(url: string): boolean {
     try {
-      new URL(url);
-      return true;
+      const urlObj = new URL(url);
+      return !!urlObj;
     } catch {
       return false;
     }

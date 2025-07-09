@@ -35,6 +35,9 @@
           "elementManifests": [
             "elements.xml",
             "ClientSideInstance.xml"
+          ],
+          "elementFiles": [
+            "monarchSidebarNavConfig.json"
           ]
         }
       }

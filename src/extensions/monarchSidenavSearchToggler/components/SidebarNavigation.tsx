@@ -48,7 +48,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 
   const filteredItems = filterItems(items);
 
-  const handleToggle = (id: string) => {
+  const handleToggle = (id: string): void => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
@@ -88,9 +88,11 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                 <button className={`${styles.configButton} ${styles.delete}`} title="Delete Item" aria-label="Delete" onClick={() => onDelete(item.id)}>
                   <Icon iconName="Delete" />
                 </button>
-                <button className={styles.configButton} title="Add Child Item" aria-label="Add Child" onClick={() => onAddChild(item.id)}>
-                  <Icon iconName="Add" />
-                </button>
+                {item.children && item.children.length === 0 && (
+                  <button className={styles.configButton} title="Add Child Item" aria-label="Add Child" onClick={() => onAddChild(item.id)}>
+                    <Icon iconName="Add" />
+                  </button>
+                )}
               </span>
             )}
           </div>

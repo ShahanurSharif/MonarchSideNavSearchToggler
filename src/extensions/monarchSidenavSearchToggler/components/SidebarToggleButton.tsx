@@ -19,11 +19,11 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
   const btnRef = React.useRef<HTMLButtonElement>(null);
   const dragState = React.useRef({ isDragging: false, dragMoved: false });
 
-  React.useEffect(() => {
+  React.useEffect((): (() => void) => {
     let startY = 0;
     let startTop = 0;
 
-    const onMouseDown = (e: MouseEvent) => {
+    const onMouseDown = (e: MouseEvent): void => {
       dragState.current.isDragging = true;
       dragState.current.dragMoved = false;
       startY = e.clientY;
@@ -31,7 +31,7 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
       document.body.style.userSelect = 'none';
     };
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent): void => {
       if (!dragState.current.isDragging) return;
       const deltaY = e.clientY - startY;
       let newTop = startTop + deltaY;
@@ -40,7 +40,7 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
       dragState.current.dragMoved = true;
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (): void => {
       dragState.current.isDragging = false;
       document.body.style.userSelect = '';
     };
@@ -52,7 +52,7 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
-    return () => {
+    return (): void => {
       if (btn) btn.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -60,7 +60,7 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
   }, [top, onDrag]);
 
   // Prevent click after drag
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent): void => {
     if (dragState.current.dragMoved) {
       e.preventDefault();
       e.stopPropagation();

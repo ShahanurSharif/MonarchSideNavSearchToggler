@@ -1,10 +1,12 @@
 import * as React from 'react';
+import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
 import { SidebarNavigation } from './components/SidebarNavigation';
 import { SidebarToggleButton } from './components/SidebarToggleButton';
 import { NavigationConfigModal } from './components/NavigationConfigModal';
 import styles from './MonarchSidenavSearchToggler.module.scss';
 import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { Icon } from '@fluentui/react/lib/Icon';
+import { ConfigurationService, SidebarConfig } from './services/ConfigurationService';
 
 // Extend NavItem to include 'order' and require 'url'
 export interface NavItem {
@@ -15,22 +17,13 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-export default function MonarchSidenavSearchToggler() {
-  const initialNav: NavItem[] = [
-    {
-      id: 'documents',
-      title: 'Documents',
-      url: '/documents', // Now a real link
-      order: 1,
-      children: [
-        { id: 'policies', title: 'Policies', url: '/documents/policies', order: 1 },
-        { id: 'procedures', title: 'Procedures', url: '/documents/procedures', order: 2 }
-      ]
-    },
-    { id: 'resources', title: 'Resources', url: '/resources', order: 2 }
-  ];
+interface MonarchSidenavSearchTogglerProps {
+  description?: string;
+  context: ApplicationCustomizerContext;
+}
 
-  const [nav, setNav] = React.useState<NavItem[]>(initialNav);
+export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavSearchTogglerProps): React.ReactElement<MonarchSidenavSearchTogglerProps> {
+  const [nav, setNav] = React.useState<NavItem[]>([]);
   const [search, setSearch] = React.useState('');
   const [isConfig, setIsConfig] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(true);
@@ -41,13 +34,86 @@ export default function MonarchSidenavSearchToggler() {
     editingItem?: NavItem;
     parentId?: string;
   }>({ isVisible: false, mode: 'add' });
-  const sidebarWidth = 300;
+  const [sidebarWidth, setSidebarWidth] = React.useState(300);
+  const [isPinned, setIsPinned] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+
   const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
 
-  const [isPinned, setIsPinned] = React.useState(false);
+  // Create ConfigurationService instance
+  const configService = React.useMemo((): ConfigurationService => new ConfigurationService(context), [context]);
+
+  const loadConfiguration = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const config = await configService.loadConfiguration();
+      
+      setNav(config.items);
+      setIsOpen(config.sidebar.isOpen);
+      setIsPinned(config.sidebar.isPinned);
+      setToggleTop(config.sidebar.togglePosition.top);
+      setSidebarWidth(config.sidebar.width);
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+      // Use default values if loading fails
+      setNav([
+        {
+          id: 'documents',
+          title: 'Documents',
+          url: '/documents',
+          order: 1,
+          children: [
+            { id: 'policies', title: 'Policies', url: '/documents/policies', order: 1 },
+            { id: 'procedures', title: 'Procedures', url: '/documents/procedures', order: 2 }
+          ]
+        },
+        { id: 'resources', title: 'Resources', url: '/resources', order: 2 }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load configuration on component mount
+  React.useEffect((): void => {
+    loadConfiguration().catch(error => {
+      console.error('Failed to load configuration:', error);
+    });
+  }, []);
+
+  const saveConfiguration = async (): Promise<void> => {
+    try {
+      console.log('🔄 saveConfiguration called with current state:', {
+        nav,
+        sidebarWidth,
+        isPinned,
+        isOpen,
+        toggleTop
+      });
+      
+      const config: Partial<SidebarConfig> = {
+        items: nav,
+        sidebar: {
+          width: sidebarWidth,
+          isPinned,
+          isOpen,
+          togglePosition: { top: toggleTop }
+        }
+      };
+      
+      const success = await configService.saveConfiguration(config);
+      if (success) {
+        console.log('✅ Configuration saved successfully');
+      } else {
+        console.error('❌ Configuration save returned false');
+      }
+    } catch (error) {
+      console.error('❌ Failed to save configuration:', error);
+    }
+  };
 
   // Push effect for pinned sidebar
-  React.useEffect(() => {
+  React.useEffect((): (() => void) => {
     const spPageChrome = document.getElementById('SPPageChrome');
     if (spPageChrome) {
       if (isOpen && isPinned) {
@@ -60,7 +126,7 @@ export default function MonarchSidenavSearchToggler() {
         spPageChrome.style.transition = 'margin-left 0.3s, width 0.3s';
       }
     }
-    return () => {
+    return (): void => {
       if (spPageChrome) {
         spPageChrome.style.marginLeft = '';
         spPageChrome.style.width = '';
@@ -84,7 +150,7 @@ export default function MonarchSidenavSearchToggler() {
   // Utility to get parent options for modal
   const getParentOptions = (): IDropdownOption[] => {
     const options: IDropdownOption[] = [];
-    const addOptions = (items: NavItem[], prefix = '') => {
+    const addOptions = (items: NavItem[], prefix = ''): void => {
       for (const item of items) {
         options.push({ key: item.id, text: prefix + item.title });
         if (item.children) addOptions(item.children, prefix + item.title + ' > ');
@@ -95,11 +161,11 @@ export default function MonarchSidenavSearchToggler() {
   };
 
   // Handlers for config mode
-  const handleEdit = (id: string) => {
+  const handleEdit = (id: string): void => {
     const item = findItemById(nav, id);
     if (item) setModalState({ isVisible: true, mode: 'edit', editingItem: item });
   };
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string): void => {
     // Remove item by id
     const removeRecursive = (items: NavItem[]): NavItem[] =>
       items.filter(item => {
@@ -107,16 +173,23 @@ export default function MonarchSidenavSearchToggler() {
         if (item.children) item.children = removeRecursive(item.children);
         return true;
       });
-    setNav(removeRecursive(nav));
+    const updatedNav = removeRecursive(nav);
+    setNav(updatedNav);
+    // Auto-save when item is deleted
+    saveConfiguration().catch(error => {
+      console.error('Failed to save configuration:', error);
+    });
   };
-  const handleAddChild = (parentId: string) => setModalState({ isVisible: true, mode: 'add', parentId });
-  const handleAddRoot = () => setModalState({ isVisible: true, mode: 'add' });
+  const handleAddChild = (parentId: string): void => setModalState({ isVisible: true, mode: 'add', parentId });
+  const handleAddRoot = (): void => setModalState({ isVisible: true, mode: 'add' });
 
   // Modal save/cancel
-  const handleModalSave = (item: NavItem, parentId?: string) => {
+  const handleModalSave = (item: NavItem, parentId?: string): void => {
     // Always ensure order and url are set
     if (!item.order) item.order = 1;
     if (!item.url) item.url = '';
+    let updatedNav: NavItem[];
+    
     if (modalState.mode === 'edit' && item.id) {
       // Update existing item
       const updateRecursive = (items: NavItem[]): NavItem[] =>
@@ -125,7 +198,7 @@ export default function MonarchSidenavSearchToggler() {
             ? { ...item, children: it.children, url: item.url || '' }
             : { ...it, children: it.children ? updateRecursive(it.children) : undefined }
         );
-      setNav(updateRecursive(nav));
+      updatedNav = updateRecursive(nav);
     } else {
       // Add new item
       const newItem = { ...item, children: [], order: item.order || 1, url: item.url || '' };
@@ -136,22 +209,71 @@ export default function MonarchSidenavSearchToggler() {
               ? { ...it, children: [...(it.children || []), { ...newItem, order: (it.children?.length || 0) + 1 }] }
               : { ...it, children: it.children ? addChildRecursive(it.children) : undefined }
           );
-        setNav(addChildRecursive(nav));
+        updatedNav = addChildRecursive(nav);
       } else {
-        setNav([...nav, { ...newItem, order: nav.length + 1 }]);
+        updatedNav = [...nav, { ...newItem, order: nav.length + 1 }];
       }
     }
+    
+    setNav(updatedNav);
     setModalState({ ...modalState, isVisible: false });
+    
+    // Auto-save when item is added/edited
+    saveConfiguration().catch(error => {
+      console.error('Failed to save configuration:', error);
+    });
   };
-  const handleModalCancel = () => setModalState({ ...modalState, isVisible: false });
+  const handleModalCancel = (): void => setModalState({ ...modalState, isVisible: false });
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(255, 255, 255, 0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <Icon iconName="Sync" style={{ fontSize: '24px', animation: 'spin 1s linear infinite' }} />
+          <div style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>Loading navigation...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <SidebarToggleButton
         isOpen={isOpen}
         top={toggleTop}
-        onToggle={() => setIsOpen(open => !open)}
-        onDrag={setToggleTop}
+        onToggle={() => {
+          setIsOpen(open => {
+            const newOpen = !open;
+            // Auto-save open state
+            setTimeout(() => {
+              saveConfiguration().catch(error => {
+                console.error('Failed to save configuration:', error);
+              });
+            }, 100);
+            return newOpen;
+          });
+        }}
+        onDrag={(newTop) => {
+          setToggleTop(newTop);
+          // Auto-save toggle position
+          setTimeout(() => {
+            saveConfiguration().catch(error => {
+              console.error('Failed to save configuration:', error);
+            });
+          }, 100);
+        }}
         sidebarWidth={sidebarWidth}
       />
       <div
@@ -176,7 +298,18 @@ export default function MonarchSidenavSearchToggler() {
                 className={styles.headerButton}
                 aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
                 title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                onClick={() => setIsPinned(pin => !pin)}
+                onClick={() => {
+                  setIsPinned(pin => {
+                    const newPinned = !pin;
+                    // Auto-save pin state
+                    setTimeout(() => {
+                      saveConfiguration().catch(error => {
+                        console.error('Failed to save configuration:', error);
+                      });
+                    }, 100);
+                    return newPinned;
+                  });
+                }}
                 style={{ marginRight: 8 }}
               >
                 <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />

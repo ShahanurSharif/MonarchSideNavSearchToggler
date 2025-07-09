@@ -101,7 +101,7 @@ export class NavigationConfigService {
     const results: Array<{item: INavigationItem, path: string[]}> = [];
     const searchTerm = query.toLowerCase();
 
-    const searchRecursive = (navItems: INavigationItem[], currentPath: string[] = []) => {
+    const searchRecursive = (navItems: INavigationItem[], currentPath: string[] = []): void => {
       for (const item of navItems) {
         const itemPath = [...currentPath, item.title];
         
