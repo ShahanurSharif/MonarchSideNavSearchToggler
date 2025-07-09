@@ -260,22 +260,30 @@ export class NavigationConfigService {
   private async saveToSharePoint(config: ISidebarNavConfig): Promise<boolean> {
     try {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
+      const serverRelativeUrl = `${this.context.pageContext.web.serverRelativeUrl.replace(/\/$/, '')}/${NavigationConfigService.CONFIG_LIST_NAME}`;
       const configJson = JSON.stringify(config, null, 2);
-      
+      const blob = new Blob([configJson], { type: 'application/json' });
+
       // Use REST API to save file to Site Assets library
-      const uploadUrl = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${NavigationConfigService.CONFIG_LIST_NAME}')/Files/add(url='${NavigationConfigService.CONFIG_FILE_NAME}',overwrite=true)`;
-      
+      const uploadUrl = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${serverRelativeUrl}')/Files/add(overwrite=true,url='${NavigationConfigService.CONFIG_FILE_NAME}')`;
+
       const response: SPHttpClientResponse = await this.context.spHttpClient.post(
         uploadUrl,
         SPHttpClient.configurations.v1,
         {
-          headers: {
-            'Accept': 'application/json;odata=verbose',
-            'Content-Type': 'application/json;odata=verbose'
-          },
-          body: configJson
+          body: blob
         }
       );
+
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          errorText = await response.text();
+        } catch {
+          // Intentionally ignore error when reading error text
+        }
+        console.error(`MonarchSidebarNav: Save failed. Status: ${response.status} ${response.statusText}. Body: ${errorText}`);
+      }
 
       return response.ok;
     } catch (error) {
@@ -370,4 +378,4 @@ export class NavigationConfigService {
 
     return newId;
   }
-} 
+}
