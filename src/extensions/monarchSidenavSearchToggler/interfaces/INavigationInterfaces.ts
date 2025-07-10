@@ -6,7 +6,7 @@ export interface INavigationItem {
   url: string;
   icon?: string;
   target?: '_blank' | '_self';
-  children?: INavigationItem[];
+  parentId: number; // 0 for root items, number for child items
   isExpanded?: boolean;
   order: number;
 }
@@ -93,7 +93,8 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
       title: 'Home',
       url: '/',
       target: '_self',
-      order: 1
+      order: 1,
+      parentId: 0
     },
     {
       id: 2,
@@ -101,29 +102,15 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
       url: '/documents',
       target: '_self',
       order: 2,
-      children: [
-        {
-          id: 1,
-          title: 'Policies',
-          url: '/documents/policies',
-          target: '_self',
-          order: 1
-        },
-        {
-          id: 2,
-          title: 'Procedures',
-          url: '/documents/procedures',
-          target: '_self',
-          order: 2
-        }
-      ]
+      parentId: 0
     },
     {
       id: 3,
       title: 'Resources',
       url: '/resources',
       target: '_self',
-      order: 3
+      order: 3,
+      parentId: 0
     },
     {
       id: 4,
@@ -131,29 +118,47 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
       url: '/support',
       target: '_self',
       order: 4,
-      children: [
-        {
-          id: 1,
-          title: 'Help Desk',
-          url: '/support/helpdesk',
-          target: '_self',
-          order: 1
-        },
-        {
-          id: 2,
-          title: 'FAQ',
-          url: '/support/faq',
-          target: '_self',
-          order: 2
-        },
-        {
-          id: 3,
-          title: 'Contact Us',
-          url: '/support/contact',
-          target: '_self',
-          order: 3
-        }
-      ]
+      parentId: 0
+    },
+    {
+      id: 5,
+      title: 'Policies',
+      url: '/documents/policies',
+      target: '_self',
+      order: 1,
+      parentId: 2
+    },
+    {
+      id: 6,
+      title: 'Procedures',
+      url: '/documents/procedures',
+      target: '_self',
+      order: 2,
+      parentId: 2
+    },
+    {
+      id: 7,
+      title: 'Help Desk',
+      url: '/support/helpdesk',
+      target: '_self',
+      order: 1,
+      parentId: 4
+    },
+    {
+      id: 8,
+      title: 'FAQ',
+      url: '/support/faq',
+      target: '_self',
+      order: 2,
+      parentId: 4
+    },
+    {
+      id: 9,
+      title: 'Contact Us',
+      url: '/support/contact',
+      target: '_self',
+      order: 3,
+      parentId: 4
     }
   ],
   theme: DefaultTheme,

@@ -7,7 +7,7 @@ export interface NavItem {
   title: string;
   url: string;
   order: number;
-  children?: NavItem[];
+  parentId: number; // 0 for root items, number for child items
 }
 
 interface SidebarNavigationProps {
@@ -31,29 +31,34 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 }) => {
   const [expanded, setExpanded] = React.useState<{ [id: number]: boolean }>({});
 
-  const filterItems = (items: NavItem[]): NavItem[] => {
+  // Helper function to get children of a parent item
+  const getChildren = (parentId: number): NavItem[] => {
+    return items
+      .filter(item => item.parentId === parentId)
+      .sort((a, b) => a.order - b.order);
+  };
+
+  // Helper function to get root items (parentId = 0)
+  const getRootItems = (): NavItem[] => {
+    return items
+      .filter(item => item.parentId === 0)
+      .sort((a, b) => a.order - b.order);
+  };
+
+  const filterItems = (itemsToFilter: NavItem[]): NavItem[] => {
     if (!searchQuery.trim()) {
-      // Sort by order when not searching
-      return items.sort((a, b) => a.order - b.order);
+      return itemsToFilter;
     }
     
     const q = searchQuery.toLowerCase();
-    const filtered = items
-      .map(item => {
-        const match = item.title.toLowerCase().includes(q) || (item.url?.toLowerCase().includes(q) ?? false);
-        const children = item.children ? filterItems(item.children) : undefined;
-        if (match || (children && children.length > 0)) {
-          return { ...item, children };
-        }
-        return null;
-      })
-      .filter(Boolean) as NavItem[];
-    
-    // Sort filtered results by order
-    return filtered.sort((a, b) => a.order - b.order);
+    return itemsToFilter.filter(item => 
+      item.title.toLowerCase().includes(q) || 
+      (item.url?.toLowerCase().includes(q) ?? false)
+    );
   };
 
-  const filteredItems = filterItems(items);
+  const rootItems = getRootItems();
+  const filteredRootItems = filterItems(rootItems);
 
   const handleToggle = (id: number): void => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -61,78 +66,82 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 
   return (
     <ul className={styles.navigationList}>
-      {filteredItems.map(item => (
-        <li className={styles.navItem} key={item.id}>
-          <div className={styles.navItemContent}>
-            {item.children && item.children.length > 0 ? (
-              <button
-                className={styles.expandButton}
-                aria-label="Expand/collapse"
-                onClick={() => handleToggle(item.id)}
-              >
-                {expanded[item.id] ? (
-                  <Icon iconName="ChevronDown" />
-                ) : (
-                  <Icon iconName="ChevronRight" />
-                )}
-              </button>
-            ) : (
-              <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
-            )}
-            {/* Only the title is inside the link */}
-            {item.url ? (
-              <a href={item.url} className={styles.navLink} target="_self">
+      {filteredRootItems.map(item => {
+        const children = getChildren(item.id);
+        const filteredChildren = filterItems(children);
+        const hasChildren = children.length > 0;
+        
+        return (
+          <li className={styles.navItem} key={item.id}>
+            <div className={styles.navItemContent}>
+              {hasChildren ? (
+                <button
+                  className={styles.expandButton}
+                  aria-label="Expand/collapse"
+                  onClick={() => handleToggle(item.id)}
+                >
+                  {expanded[item.id] ? (
+                    <Icon iconName="ChevronDown" />
+                  ) : (
+                    <Icon iconName="ChevronRight" />
+                  )}
+                </button>
+              ) : (
+                <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
+              )}
+              {/* Only the title is inside the link */}
+              {item.url ? (
+                <a href={item.url} className={styles.navLink} target="_self">
+                  <span className={styles.navTitle}>{item.title}</span>
+                </a>
+              ) : (
                 <span className={styles.navTitle}>{item.title}</span>
-              </a>
-            ) : (
-              <span className={styles.navTitle}>{item.title}</span>
-            )}
-            {isConfigMode && (
-              <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-                <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(item.id)}>
-                  <Icon iconName="Edit" />
-                </button>
-                <button className={`${styles.configButton} ${styles.delete}`} title="Delete Item" aria-label="Delete" onClick={() => onDelete(item.id)}>
-                  <Icon iconName="Delete" />
-                </button>
-                {item.children && item.children.length === 0 && (
+              )}
+              {isConfigMode && (
+                <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                  <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(item.id)}>
+                    <Icon iconName="Edit" />
+                  </button>
+                  <button className={`${styles.configButton} ${styles.delete}`} title="Delete Item" aria-label="Delete" onClick={() => onDelete(item.id)}>
+                    <Icon iconName="Delete" />
+                  </button>
                   <button className={styles.configButton} title="Add Child Item" aria-label="Add Child" onClick={() => onAddChild(item.id)}>
                     <Icon iconName="Add" />
                   </button>
-                )}
-              </span>
-            )}
-          </div>
-          {item.children && item.children.length > 0 && expanded[item.id] && (
-            <ul className={styles.navChildren}>
-              {item.children.map(child => (
-                <li className={styles.navItem} key={child.id}>
-                  <div className={styles.navItemContent}>
-                    <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
-                    {child.url ? (
-                      <a href={child.url} className={styles.navLink} target="_self">
+                </span>
+              )}
+            </div>
+            {hasChildren && expanded[item.id] && (
+              <ul className={styles.navChildren}>
+                {(searchQuery.trim() ? filteredChildren : children).map(child => (
+                  <li className={styles.navItem} key={child.id}>
+                    <div className={styles.navItemContent}>
+                      <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
+                      {child.url ? (
+                        <a href={child.url} className={styles.navLink} target="_self">
+                          <span className={styles.navTitle}>{child.title}</span>
+                        </a>
+                      ) : (
                         <span className={styles.navTitle}>{child.title}</span>
-                      </a>
-                    ) : (
-                      <span className={styles.navTitle}>{child.title}</span>
-                    )}
-                    {isConfigMode && (
-                      <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-                        <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(child.id)}>
-                          <Icon iconName="Edit" />
-                        </button>
-                        <button className={`${styles.configButton} ${styles.delete}`} title="Delete Item" aria-label="Delete" onClick={() => onDelete(child.id)}>
-                          <Icon iconName="Delete" />
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
+                      )}
+                      {isConfigMode && (
+                        <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                          <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(child.id)}>
+                            <Icon iconName="Edit" />
+                          </button>
+                          <button className={`${styles.configButton} ${styles.delete}`} title="Delete Item" aria-label="Delete" onClick={() => onDelete(child.id)}>
+                            <Icon iconName="Delete" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })}
       {isConfigMode && (
         <li className={styles.configActions}>
           <button className={styles.addButton} onClick={onAddRoot}>

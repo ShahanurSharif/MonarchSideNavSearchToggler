@@ -15,7 +15,7 @@ export interface NavItem {
   target?: '_blank' | '_self'; // Optional target for links
   url: string;
   order: number;
-  children?: NavItem[];
+  parentId: number; // 0 for root items, number for child items
 }
 
 interface MonarchSidenavSearchTogglerProps {
@@ -50,6 +50,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const loadConfiguration = async (): Promise<void> => {
     try {
       setIsLoading(true);
+      
       const config = await configService.loadConfiguration();
       console.log('MonarchSideNavSearchToggler: Loaded config:', config);
       
@@ -84,7 +85,8 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           "title": "Home",
           "url": "/",
           "target": "_self",
-          "order": 1
+          "order": 1,
+          "parentId": 0
         },
         {
           "id": 2,
@@ -92,23 +94,24 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           "url": "/documents",
           "target": "_self",
           "order": 2,
-          "children": [
-            {
-              "id": 1,
-              "title": "Policies",
-              "url": "/documents/policies",
-              "target": "_self",
-              "order": 1
-            },
-            {
-              "id": 2,
-              "title": "Procedures",
-              "url": "/documents/procedures",
-              "target": "_self",
-              "order": 2
-            }
-          ]
+          "parentId": 0
         },
+        {
+          "id": 5,
+          "title": "Policies",
+          "url": "/documents/policies",
+          "target": "_self",
+          "order": 1,
+          "parentId": 2
+        },
+        {
+          "id": 6,
+          "title": "Procedures",
+          "url": "/documents/procedures",
+          "target": "_self",
+          "order": 2,
+          "parentId": 2
+        }
       ]);
       setIsOpen(true);
       setIsPinned(false);
@@ -175,26 +178,17 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
 
   // Utility to find an item by id
   const findItemById = (items: NavItem[], id: number): NavItem | undefined => {
-    for (const item of items) {
-      if (item.id === id) return item;
-      if (item.children) {
-        const found = findItemById(item.children, id);
-        if (found) return found;
-      }
-    }
-    return undefined;
+    return items.find(item => item.id === id);
   };
 
   // Utility to get parent options for modal
   const getParentOptions = (): IDropdownOption[] => {
     const options: IDropdownOption[] = [];
-    const addOptions = (items: NavItem[], prefix = ''): void => {
-      for (const item of items) {
-        options.push({ key: item.id, text: prefix + item.title });
-        if (item.children) addOptions(item.children, prefix + item.title + ' > ');
-      }
-    };
-    addOptions(nav);
+    // Only show root items (parentId = 0) as potential parents
+    const rootItems = nav.filter(item => item.parentId === 0);
+    for (const item of rootItems) {
+      options.push({ key: item.id, text: item.title });
+    }
     return options;
   };
 
@@ -229,13 +223,8 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   };
   const handleDelete = (id: number): void => {
     setNav(prevNav => {
-      const removeRecursive = (items: NavItem[]): NavItem[] =>
-        items.filter(item => {
-          if (item.id === id) return false;
-          if (item.children) item.children = removeRecursive(item.children);
-          return true;
-        });
-      const updatedNav = removeRecursive(prevNav);
+      // Remove item and its children from flat array
+      const updatedNav = prevNav.filter(item => item.id !== id && item.parentId !== id);
       // Auto-save with the latest nav array
       saveConfigurationWithNav(updatedNav).catch(error => {
         console.error('Failed to save configuration:', error);
@@ -253,27 +242,23 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     setNav(prevNav => {
       let updatedNav: NavItem[];
       if (modalState.mode === 'edit' && item.id) {
-        // monarchNav pattern: replace the entire item by id
-        const updateRecursive = (items: NavItem[]): NavItem[] =>
-          items.map(it =>
-            it.id === item.id
-              ? { ...item }
-              : { ...it, children: it.children ? updateRecursive(it.children) : undefined }
-          );
-        updatedNav = updateRecursive(prevNav);
-      } else {
-        const newItem = { ...item, children: [], order: item.order || 1, url: item.url || '' };
-        if (parentId) {
-          const addChildRecursive = (items: NavItem[]): NavItem[] =>
-            items.map(it =>
-              it.id === parentId
-                ? { ...it, children: [...(it.children || []), { ...newItem, order: (it.children?.length || 0) + 1 }] }
-                : { ...it, children: it.children ? addChildRecursive(it.children) : undefined }
-            );
-          updatedNav = addChildRecursive(prevNav);
+        // monarchNav pattern: replace the entire item by id in flat array
+        const itemIndex = prevNav.findIndex(it => it.id === item.id);
+        if (itemIndex !== -1) {
+          updatedNav = [...prevNav];
+          updatedNav[itemIndex] = { ...item };
         } else {
-          updatedNav = [...prevNav, { ...newItem, order: prevNav.length + 1 }];
+          updatedNav = prevNav;
         }
+      } else {
+        // Add new item to flat array
+        const newItem = { ...item, order: item.order || 1, url: item.url || '', parentId: parentId || 0 };
+        if (!newItem.id) {
+          // Generate new ID
+          const maxId = prevNav.length > 0 ? Math.max(...prevNav.map(it => it.id)) : 0;
+          newItem.id = maxId + 1;
+        }
+        updatedNav = [...prevNav, newItem];
       }
       setModalState({ ...modalState, isVisible: false });
       // Auto-save with the latest nav array

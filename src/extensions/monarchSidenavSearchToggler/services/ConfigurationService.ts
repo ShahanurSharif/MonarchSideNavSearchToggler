@@ -7,7 +7,7 @@ export interface NavItem {
   target?: '_blank' | '_self';
   url: string;
   order: number;
-  children?: NavItem[];
+  parentId: number; // 0 for root items, number for child items
 }
 
 export interface SidebarConfig {
@@ -59,7 +59,8 @@ const FALLBACK_CONFIG: SidebarConfig = {
       "title": "Home",
       "url": "/",
       "target": "_self",
-      "order": 1
+      "order": 1,
+      "parentId": 0
     },
     {
       "id": 2,
@@ -67,22 +68,23 @@ const FALLBACK_CONFIG: SidebarConfig = {
       "url": "/documents",
       "target": "_self",
       "order": 2,
-      "children": [
-        {
-          "id": 1,
-          "title": "Policies",
-          "url": "/documents/policies",
-          "target": "_self",
-          "order": 1
-        },
-        {
-          "id": 2,
-          "title": "Procedures",
-          "url": "/documents/procedures",
-          "target": "_self",
-          "order": 2
-        }
-      ]
+      "parentId": 0
+    },
+    {
+      "id": 5,
+      "title": "Policies",
+      "url": "/documents/policies",
+      "target": "_self",
+      "order": 1,
+      "parentId": 2
+    },
+    {
+      "id": 6,
+      "title": "Procedures",
+      "url": "/documents/procedures",
+      "target": "_self",
+      "order": 2,
+      "parentId": 2
     }
   ],
   sidebar: {

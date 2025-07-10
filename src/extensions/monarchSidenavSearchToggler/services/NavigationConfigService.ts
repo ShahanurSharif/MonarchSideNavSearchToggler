@@ -5,8 +5,6 @@ import { ISidebarNavConfig, DefaultNavigationConfig, INavigationItem } from '../
 export class NavigationConfigService {
   private static readonly CONFIG_FILE_NAME = 'monarchSidebarNavConfig.json';
   private static readonly CONFIG_LIST_NAME = 'SiteAssets';
-  private static readonly CACHE_KEY = 'monarch-sidebar-nav-config';
-  private static readonly CACHE_EXPIRY_HOURS = 720; // Cache expires after 720 hours
 
   private context: ApplicationCustomizerContext;
 
@@ -19,18 +17,10 @@ export class NavigationConfigService {
    */
   public async loadConfiguration(): Promise<ISidebarNavConfig> {
     try {
-      // Try to get from cache first
-      const cachedConfig = this.getCachedConfig();
-      if (cachedConfig) {
-        console.log('MonarchSideNavSearchToggler: Loaded configuration from cache');
-        return cachedConfig;
-      }
-
-      // Try to load from SharePoint
+      // Always load from SharePoint (no caching)
       const config = await this.loadFromSharePoint();
       if (config) {
         console.log('MonarchSideNavSearchToggler: Loaded configuration from SharePoint');
-        this.cacheConfig(config);
         return config;
       }
 
@@ -56,7 +46,6 @@ export class NavigationConfigService {
 
       const success = await this.saveToSharePoint(config);
       if (success) {
-        this.cacheConfig(config);
         console.log('MonarchSideNavSearchToggler: Configuration saved successfully');
         return true;
       }
@@ -120,44 +109,38 @@ export class NavigationConfigService {
     const results: Array<{item: INavigationItem, path: string[]}> = [];
     const searchTerm = query.toLowerCase();
 
-    const searchRecursive = (navItems: INavigationItem[], currentPath: string[] = []): void => {
-      for (const item of navItems) {
-        const itemPath = [...currentPath, item.title];
-        
-        // Check if title or URL matches
-        if (item.title.toLowerCase().includes(searchTerm) || 
-            item.url.toLowerCase().includes(searchTerm)) {
-          results.push({ item, path: itemPath });
-        }
-
-        // Search children recursively
-        if (item.children && item.children.length > 0) {
-          searchRecursive(item.children, itemPath);
+    // Build path for each item - simple approach to avoid TypeScript issues
+    const buildPath = (item: INavigationItem): string[] => {
+      const path: string[] = [item.title];
+      
+      // Find parent if exists (parentId > 0)
+      if (item.parentId > 0) {
+        const parent = items.find(i => i.id === item.parentId);
+        if (parent) {
+          const parentPath = buildPath(parent);
+          return [...parentPath, item.title];
         }
       }
+      
+      return path;
     };
+    
+    // Search all items
+    for (const item of items) {
+      if (item.title.toLowerCase().includes(searchTerm) || 
+          item.url.toLowerCase().includes(searchTerm)) {
+        results.push({ item, path: buildPath(item) });
+      }
+    }
 
-    searchRecursive(items);
     return results;
   }
 
   /**
-   * Gets navigation item by ID (recursive search)
+   * Gets navigation item by ID (flat array search)
    */
   public findNavigationItemById(items: INavigationItem[], id: number): INavigationItem | undefined {
-    for (const item of items) {
-      if (item.id === id) {
-        return item;
-      }
-      
-      if (item.children) {
-        const found = this.findNavigationItemById(item.children, id);
-        if (found) {
-          return found;
-        }
-      }
-    }
-    return undefined;
+    return items.find(item => item.id === id);
   }
 
   /**
@@ -168,21 +151,13 @@ export class NavigationConfigService {
       if (!newItem.id) {
         newItem.id = this.generateUniqueId(config.items);
       }
-      if (parentId) {
-        // Add to parent's children immutably
-        const updateChildren = (items: INavigationItem[]): INavigationItem[] =>
-          items.map(item =>
-            item.id === parentId
-              ? { ...item, children: [...(item.children || []), newItem].sort((a, b) => a.order - b.order) }
-              : { ...item, children: item.children ? updateChildren(item.children) : undefined }
-          );
-        config.items = updateChildren(config.items);
-        return true;
-      } else {
-        // Add to root level immutably
-        config.items = [...config.items, newItem].sort((a, b) => a.order - b.order);
-        return true;
-      }
+      
+      // Set parentId based on parameter (0 for root items)
+      newItem.parentId = parentId || 0;
+      
+      // Add to flat array and sort by order
+      config.items = [...config.items, newItem].sort((a, b) => a.order - b.order);
+      return true;
     } catch (error) {
       console.error('MonarchSideNavSearchToggler: Error adding navigation item:', error);
       return false;
@@ -194,14 +169,14 @@ export class NavigationConfigService {
    */
   public updateNavigationItem(config: ISidebarNavConfig, updatedItem: INavigationItem): boolean {
     try {
-      const updateRecursive = (items: INavigationItem[]): INavigationItem[] =>
-        items.map(item =>
-          item.id === updatedItem.id
-            ? { ...updatedItem }
-            : { ...item, children: item.children ? updateRecursive(item.children) : undefined }
-        );
-      config.items = updateRecursive(config.items);
-      return true;
+      // Update item in flat array
+      const itemIndex = config.items.findIndex(item => item.id === updatedItem.id);
+      if (itemIndex !== -1) {
+        config.items = [...config.items];
+        config.items[itemIndex] = { ...updatedItem };
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('MonarchSideNavSearchToggler: Error updating navigation item:', error);
       return false;
@@ -213,22 +188,12 @@ export class NavigationConfigService {
    */
   public removeNavigationItem(config: ISidebarNavConfig, id: number): boolean {
     try {
-      // Recursively filter out the item with the given id
-      const removeRecursive = (items: INavigationItem[]): INavigationItem[] =>
-        items
-          .filter(item => item.id !== id)
-          .map(item => ({
-            ...item,
-            children: item.children ? removeRecursive(item.children) : undefined
-          }));
-      const newNavigation = removeRecursive(config.items);
-      // Only update if something was actually removed
-      if (newNavigation.length !== config.items.length ||
-          JSON.stringify(newNavigation) !== JSON.stringify(config.items)) {
-        config.items = newNavigation;
-        return true;
-      }
-      return false;
+      // Remove item from flat array and also remove any children
+      const initialLength = config.items.length;
+      config.items = config.items.filter(item => item.id !== id && item.parentId !== id);
+      
+      // Return true if something was removed
+      return config.items.length !== initialLength;
     } catch (error) {
       console.error('MonarchSideNavSearchToggler: Error removing navigation item:', error);
       return false;
@@ -387,46 +352,7 @@ export class NavigationConfigService {
     }
   }
 
-  private getCachedConfig(): ISidebarNavConfig | undefined {
-    try {
-      const cachedData = localStorage.getItem(NavigationConfigService.CACHE_KEY);
-      if (!cachedData) {
-        return undefined;
-      }
-
-      const parsed = JSON.parse(cachedData);
-      const currentTime = new Date().getTime();
-
-      // Check if cache has expired
-      if (currentTime > parsed.expiry) {
-        localStorage.removeItem(NavigationConfigService.CACHE_KEY);
-        return undefined;
-      }
-
-      if (this.validateConfiguration(parsed.config)) {
-        return parsed.config;
-      }
-
-      return undefined;
-    } catch (error) {
-      console.warn('MonarchSideNavSearchToggler: Error reading cached config:', error);
-      return undefined;
-    }
-  }
-
-  private cacheConfig(config: ISidebarNavConfig): void {
-    try {
-      const expiryTime = new Date().getTime() + (NavigationConfigService.CACHE_EXPIRY_HOURS * 60 * 60 * 1000);
-      const cacheData = {
-        config,
-        expiry: expiryTime,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem(NavigationConfigService.CACHE_KEY, JSON.stringify(cacheData));
-    } catch (error) {
-      console.warn('MonarchSideNavSearchToggler: Failed to cache config:', error);
-    }
-  }
+  // Cache methods removed - only toggle position is cached now
 
   private createDefaultConfig(): ISidebarNavConfig {
     const config = { ...DefaultNavigationConfig };
@@ -442,27 +368,12 @@ export class NavigationConfigService {
         console.warn('MonarchSideNavSearchToggler: Invalid navigation item:', item);
         return false;
       }
-
-      if (item.children && !this.validateNavigationItems(item.children)) {
-        return false;
-      }
     }
     return true;
   }
 
   private generateUniqueId(existingItems: INavigationItem[]): number {
-    const getAllIds = (items: INavigationItem[]): number[] => {
-      let ids: number[] = [];
-      for (const item of items) {
-        ids.push(item.id);
-        if (item.children) {
-          ids = ids.concat(getAllIds(item.children));
-        }
-      }
-      return ids;
-    };
-
-    const existingIds = getAllIds(existingItems);
+    const existingIds = existingItems.map(item => item.id);
     const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
     return maxId + 1;
   }
