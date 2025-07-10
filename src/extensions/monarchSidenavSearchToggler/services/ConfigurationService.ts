@@ -2,8 +2,9 @@ import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 
 export interface NavItem {
-  id: string;
+  id: number;
   title: string;
+  target?: '_blank' | '_self';
   url: string;
   order: number;
   children?: NavItem[];
@@ -54,16 +55,35 @@ const FALLBACK_CONFIG: SidebarConfig = {
   },
   items: [
     {
-      id: 'documents',
-      title: 'Documents',
-      url: '/documents',
-      order: 1,
-      children: [
-        { id: 'policies', title: 'Policies', url: '/documents/policies', order: 1 },
-        { id: 'procedures', title: 'Procedures', url: '/documents/procedures', order: 2 }
-      ]
+      "id": 1,
+      "title": "Home",
+      "url": "/",
+      "target": "_self",
+      "order": 1
     },
-    { id: 'resources', title: 'Resources', url: '/resources', order: 2 }
+    {
+      "id": 2,
+      "title": "Documents",
+      "url": "/documents",
+      "target": "_self",
+      "order": 2,
+      "children": [
+        {
+          "id": 1,
+          "title": "Policies",
+          "url": "/documents/policies",
+          "target": "_self",
+          "order": 1
+        },
+        {
+          "id": 2,
+          "title": "Procedures",
+          "url": "/documents/procedures",
+          "target": "_self",
+          "order": 2
+        }
+      ]
+    }
   ],
   sidebar: {
     width: 300,
