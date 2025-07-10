@@ -45,20 +45,69 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       .sort((a, b) => a.order - b.order);
   };
 
-  const filterItems = (itemsToFilter: NavItem[]): NavItem[] => {
+  // Enhanced search logic that handles parent-child relationships
+  const getSearchResults = (): { rootItems: NavItem[], childItems: { [parentId: number]: NavItem[] } } => {
     if (!searchQuery.trim()) {
-      return itemsToFilter;
+      // No search: return normal hierarchy
+      const rootItems = getRootItems();
+      const childItems: { [parentId: number]: NavItem[] } = {};
+      rootItems.forEach(item => {
+        const children = getChildren(item.id);
+        if (children.length > 0) {
+          childItems[item.id] = children;
+        }
+      });
+      return { rootItems, childItems };
     }
-    
+
+    // Search mode: find all matching items and their parents
     const q = searchQuery.toLowerCase();
-    return itemsToFilter.filter(item => 
+    const matchingItems = items.filter(item => 
       item.title.toLowerCase().includes(q) || 
       (item.url?.toLowerCase().includes(q) ?? false)
     );
+
+    // Get all parent IDs that have matching children
+    const parentIdsWithMatchingChildren = new Set<number>();
+    matchingItems.forEach(item => {
+      if (item.parentId > 0) {
+        parentIdsWithMatchingChildren.add(item.parentId);
+      }
+    });
+
+    // Get root items that either match the search or have matching children
+    const rootItems = getRootItems().filter(item => 
+      matchingItems.some(match => match.id === item.id) || 
+      parentIdsWithMatchingChildren.has(item.id)
+    );
+
+    // Get children for parents that have matching children
+    const childItems: { [parentId: number]: NavItem[] } = {};
+    rootItems.forEach(item => {
+      const allChildren = getChildren(item.id);
+      const matchingChildren = allChildren.filter(child => 
+        matchingItems.some(match => match.id === child.id)
+      );
+      if (matchingChildren.length > 0) {
+        childItems[item.id] = matchingChildren;
+      }
+    });
+
+    return { rootItems, childItems };
   };
 
-  const rootItems = getRootItems();
-  const filteredRootItems = filterItems(rootItems);
+  const { rootItems, childItems } = getSearchResults();
+
+  // Auto-expand parents that have matching children during search
+  React.useEffect(() => {
+    if (searchQuery.trim()) {
+      const newExpanded: { [id: number]: boolean } = {};
+      Object.keys(childItems).forEach(parentId => {
+        newExpanded[parseInt(parentId)] = true;
+      });
+      setExpanded(newExpanded);
+    }
+  }, [searchQuery, childItems]);
 
   const handleToggle = (id: number): void => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -66,9 +115,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 
   return (
     <ul className={styles.navigationList}>
-      {filteredRootItems.map(item => {
-        const children = getChildren(item.id);
-        const filteredChildren = filterItems(children);
+      {rootItems.map(item => {
+        const children = childItems[item.id] || [];
         const hasChildren = children.length > 0;
         
         return (
@@ -113,7 +161,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             </div>
             {hasChildren && expanded[item.id] && (
               <ul className={styles.navChildren}>
-                {(searchQuery.trim() ? filteredChildren : children).map(child => (
+                {children.map(child => (
                   <li className={styles.navItem} key={child.id}>
                     <div className={styles.navItemContent}>
                       <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>

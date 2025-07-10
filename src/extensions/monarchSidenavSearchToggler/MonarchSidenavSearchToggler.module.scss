@@ -210,10 +210,9 @@
   color: #605e5c;
   font-size: 14px;
   border-radius: 2px;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s;
 
   &:hover, &:focus {
-    background: #e1dfdd;
     color: #0078d4;
     outline: none;
   }
@@ -270,8 +269,8 @@ ul.navChildren {
 // Configuration Mode
 .configButtons {
   display: flex;
-  gap: 4px;
-  margin-left: 8px;
+  gap: 2px;
+  margin-left: 6px;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -282,20 +281,27 @@ ul.navChildren {
 
 .configButton {
   background: none;
-  border: none;
+  border: 1px solid #d2d0ce;
   color: #605e5c;
-  font-size: 13px;
-  margin-left: 8px;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  font-size: 12px;
+  margin-left: 2px;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
   opacity: 0;
   pointer-events: none;
+
+  &:hover, &:focus {
+    border-color: #0078d4;
+    color: #0078d4;
+    background: #f8f9fa;
+    outline: none;
+  }
 }
 
 .navItemContent:hover .configButton,
@@ -307,16 +313,20 @@ ul.navChildren {
 
 .configButton.edit {
   &:hover, &:focus {
-    background: #e5f1fb;
+    border-color: #0078d4;
     color: #0078d4;
-    box-shadow: 0 0 0 2px #0078d4;
+    background: #f0f7ff;
   }
 }
+
 .configButton.delete {
+  border-color: #d13438;
+  color: #d13438;
+
   &:hover, &:focus {
-    background: #fef6f6;
+    border-color: #d13438;
     color: #d13438;
-    box-shadow: 0 0 0 2px #d13438;
+    background: #fef6f6;
   }
 }
 
@@ -328,21 +338,22 @@ ul.navChildren {
 }
 
 .addButton {
-  background: #0078d4;
-  color: #fff;
-  border: none;
+  background: none;
+  color: #0078d4;
+  border: 1px solid #0078d4;
   border-radius: 3px;
   padding: 6px 12px;
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 
   &:hover, &:focus {
-    background: #106ebe;
+    background: #0078d4;
+    color: #fff;
     outline: none;
   }
 }

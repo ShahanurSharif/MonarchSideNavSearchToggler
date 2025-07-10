@@ -37,6 +37,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     mode: 'add' | 'edit';
     editingItem?: NavItem;
     parentId?: number;
+    parentTitle?: string;
   }>({ isVisible: false, mode: 'add' });
   const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isPinned, setIsPinned] = React.useState(false);
@@ -222,17 +223,38 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     if (item) setModalState({ isVisible: true, mode: 'edit', editingItem: item });
   };
   const handleDelete = (id: number): void => {
-    setNav(prevNav => {
-      // Remove item and its children from flat array
-      const updatedNav = prevNav.filter(item => item.id !== id && item.parentId !== id);
-      // Auto-save with the latest nav array
-      saveConfigurationWithNav(updatedNav).catch(error => {
-        console.error('Failed to save configuration:', error);
+    const itemToDelete = findItemById(nav, id);
+    if (!itemToDelete) return;
+
+    const itemTitle = itemToDelete.title;
+    const hasChildren = nav.some(item => item.parentId === id);
+    
+    let confirmMessage = `Are you sure you want to delete "${itemTitle}"?`;
+    if (hasChildren) {
+      confirmMessage += `\n\nThis will also delete all child items.`;
+    }
+
+    if (window.confirm(confirmMessage)) {
+      setNav(prevNav => {
+        // Remove item and its children from flat array
+        const updatedNav = prevNav.filter(item => item.id !== id && item.parentId !== id);
+        // Auto-save with the latest nav array
+        saveConfigurationWithNav(updatedNav).catch(error => {
+          console.error('Failed to save configuration:', error);
+        });
+        return updatedNav;
       });
-      return updatedNav;
+    }
+  };
+  const handleAddChild = (parentId: number): void => {
+    const parentItem = findItemById(nav, parentId);
+    setModalState({ 
+      isVisible: true, 
+      mode: 'add', 
+      parentId,
+      parentTitle: parentItem?.title 
     });
   };
-  const handleAddChild = (parentId: number): void => setModalState({ isVisible: true, mode: 'add', parentId });
   const handleAddRoot = (): void => setModalState({ isVisible: true, mode: 'add' });
 
   // Modal save/cancel
@@ -391,6 +413,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           mode={modalState.mode}
           item={modalState.editingItem}
           parentId={modalState.parentId}
+          parentTitle={modalState.parentTitle}
           parentOptions={getParentOptions()}
           onSave={handleModalSave}
           onCancel={handleModalCancel}

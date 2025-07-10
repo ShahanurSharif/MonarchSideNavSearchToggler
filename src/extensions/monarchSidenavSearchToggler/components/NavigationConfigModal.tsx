@@ -21,6 +21,7 @@ export interface INavigationConfigModalProps {
   mode: 'add' | 'edit';
   item?: NavItem;
   parentId?: number;
+  parentTitle?: string;
   parentOptions: IDropdownOption[];
   onSave: (item: NavItem, parentId?: number) => void;
   onCancel: () => void;
@@ -69,9 +70,9 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
   // No longer needed with flat structure - child items are handled separately
 
   public render(): React.ReactElement<INavigationConfigModalProps> {
-    const { isVisible, mode, onCancel } = this.props;
+    const { isVisible, mode, onCancel, parentTitle } = this.props;
     const { formData, errors, isValid } = this.state;
-    const title = mode === 'add' ? 'Add Navigation' : 'Edit Navigation';
+    const title = mode === 'add' && parentTitle ? `Add Child to ${parentTitle}` : (mode === 'add' ? 'Add Navigation' : 'Edit Navigation');
     const openInOptions = [
       { key: 'same', text: 'Same tab (default)' },
       { key: 'new', text: 'New tab' }
