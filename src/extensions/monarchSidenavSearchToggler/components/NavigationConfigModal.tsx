@@ -7,7 +7,7 @@ import styles from '../MonarchSidenavSearchToggler.module.scss';
 
 // Use the same NavItem interface as the main component
 export interface NavItem {
-  id: string;
+  id: number;
   title: string;
   url: string;
   order: number;
@@ -19,14 +19,15 @@ export interface INavigationConfigModalProps {
   isVisible: boolean;
   mode: 'add' | 'edit';
   item?: NavItem;
+  parentId?: number;
   parentOptions: IDropdownOption[];
-  onSave: (item: NavItem, parentId?: string) => void;
+  onSave: (item: NavItem, parentId?: number) => void;
   onCancel: () => void;
 }
 
 export interface INavigationConfigModalState {
   formData: NavItem;
-  parentId?: string;
+  parentId?: number;
   errors: { [key: string]: string };
   isValid: boolean;
 }
@@ -39,7 +40,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
 
     this.state = {
       formData: this.initializeFormData(),
-      parentId: undefined,
+      parentId: props.parentId,
       errors: {},
       isValid: false
     };
@@ -48,11 +49,12 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
   public componentDidUpdate(prevProps: INavigationConfigModalProps): void {
     if (prevProps.isVisible !== this.props.isVisible || 
         prevProps.item !== this.props.item || 
-        prevProps.mode !== this.props.mode) {
+        prevProps.mode !== this.props.mode ||
+        prevProps.parentId !== this.props.parentId) {
       
       this.setState({
         formData: this.initializeFormData(),
-        parentId: undefined,
+        parentId: this.props.parentId,
         errors: {},
         isValid: false
       }, () => {
@@ -83,9 +85,16 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
   private onAddChild = (): void => {
     const parentId = this.props.item?.id;
     if (parentId) {
+      // Generate child ID based on existing children count
+      const existingChildren = this.props.item?.children || [];
+      const maxChildId = existingChildren.length > 0 
+        ? Math.max(...existingChildren.map(child => child.id))
+        : 0;
+      const newChildId = maxChildId + 1;
+
       this.setState({
         formData: {
-          id: `nav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: newChildId,
           title: '',
           url: '',
           order: 1,
@@ -197,7 +206,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       return { ...this.props.item, children: this.props.item.children || [] };
     }
     return {
-      id: '',
+      id: 0,
       title: '',
       url: '',
       order: 1,
@@ -270,9 +279,9 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
   private onSave = (): void => {
     if (this.state.isValid) {
       const { formData, parentId } = this.state;
-      // Always ensure an id exists for both add and edit
-      if (!formData.id) {
-        formData.id = `nav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // For add mode, let the service generate the ID (set to 0 for now)
+      if (!formData.id && this.props.mode === 'add') {
+        formData.id = 0; // Service will generate proper numeric ID
       }
       // Only pass parentId for add mode (never for edit)
       const passParentId = this.props.mode === 'add' ? (parentId || undefined) : undefined;

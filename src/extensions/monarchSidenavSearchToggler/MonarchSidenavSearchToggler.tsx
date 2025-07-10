@@ -6,11 +6,11 @@ import { NavigationConfigModal } from './components/NavigationConfigModal';
 import styles from './MonarchSidenavSearchToggler.module.scss';
 import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { Icon } from '@fluentui/react/lib/Icon';
-import { ConfigurationService, SidebarConfig } from './services/ConfigurationService';
+import { NavigationConfigService } from './services/NavigationConfigService';
 
 // Extend NavItem to include 'order' and require 'url'
 export interface NavItem {
-  id: string;
+  id: number;
   title: string;
   url: string;
   order: number;
@@ -28,14 +28,14 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const [isConfig, setIsConfig] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(true);
   const [toggleTop, setToggleTop] = React.useState<number>(() => {
-    const configService = new ConfigurationService(context);
-    return configService.getTogglerPosition();
+    const configService = new NavigationConfigService(context);
+    return parseInt(configService.getTogglerPosition() || '100', 10);
   });
   const [modalState, setModalState] = React.useState<{
     isVisible: boolean;
     mode: 'add' | 'edit';
     editingItem?: NavItem;
-    parentId?: string;
+    parentId?: number;
   }>({ isVisible: false, mode: 'add' });
   const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isPinned, setIsPinned] = React.useState(false);
@@ -43,34 +43,56 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
 
   const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
 
-  // Create ConfigurationService instance
-  const configService = React.useMemo((): ConfigurationService => new ConfigurationService(context), [context]);
+  // Create NavigationConfigService instance
+  const configService = React.useMemo((): NavigationConfigService => new NavigationConfigService(context), [context]);
 
   const loadConfiguration = async (): Promise<void> => {
     try {
       setIsLoading(true);
       const config = await configService.loadConfiguration();
+      console.log('MonarchSideNavSearchToggler: Loaded config:', config);
+      
+      // Set navigation items
       setNav(config.items);
-      setIsOpen(config.sidebar.isOpen);
-      setIsPinned(config.sidebar.isPinned);
-      setSidebarWidth(config.sidebar.width);
-      // Do NOT set toggleTop from config.sidebar.togglePosition
+      
+      // Set sidebar configuration from config
+      if (config.sidebar) {
+        setIsOpen(config.sidebar.isOpen);
+        setIsPinned(config.sidebar.isPinned);
+        console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', config.sidebar.isOpen, 'isPinned:', config.sidebar.isPinned);
+      }
+      
+      // Set sidebar width from theme
+      if (config.theme && config.theme.sidebarWidth) {
+        const width = parseInt(config.theme.sidebarWidth.replace('px', ''), 10);
+        if (!isNaN(width)) {
+          setSidebarWidth(width);
+          console.log('MonarchSideNavSearchToggler: Set sidebar width:', width);
+        }
+      }
+      
+      // Toggle position still comes from localStorage as it's user-specific
+      // Do NOT set toggleTop from config - it comes from localStorage via getTogglerPosition()
+      
     } catch (error) {
-      console.error('Failed to load configuration:', error);
+      console.error('MonarchSideNavSearchToggler: Failed to load configuration:', error);
       // Use default values if loading fails
       setNav([
         {
-          id: 'documents',
+          id: 1,
           title: 'Documents',
           url: '/documents',
           order: 1,
           children: [
-            { id: 'policies', title: 'Policies', url: '/documents/policies', order: 1 },
-            { id: 'procedures', title: 'Procedures', url: '/documents/procedures', order: 2 }
+            { id: 1, title: 'Policies', url: '/documents/policies', order: 1 },
+            { id: 2, title: 'Procedures', url: '/documents/procedures', order: 2 }
           ]
         },
-        { id: 'resources', title: 'Resources', url: '/resources', order: 2 }
+        { id: 2, title: 'Resources', url: '/resources', order: 2 }
       ]);
+      setIsOpen(true);
+      setIsPinned(false);
+      setSidebarWidth(300);
     } finally {
       setIsLoading(false);
     }
@@ -85,21 +107,18 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
 
   const saveConfiguration = async (): Promise<void> => {
     try {
-      console.log('🔄 saveConfiguration called with current state:', {
-        nav,
-        sidebarWidth,
+      console.log('🔄 saveConfiguration called with current nav:', nav);
+      const config = await configService.loadConfiguration();
+      config.items = nav;
+      
+      // Update sidebar configuration
+      config.sidebar = {
+        isOpen,
         isPinned,
-        isOpen
-      });
-      const config: Partial<SidebarConfig> = {
-        items: nav,
-        sidebar: {
-          width: sidebarWidth,
-          isPinned,
-          isOpen,
-          togglePosition: { top: configService.getTogglerPosition() }
-        }
+        position: 'left' // We only support left position for now
       };
+      
+      console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
         console.log('✅ Configuration saved successfully');
@@ -135,7 +154,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   }, [isOpen, isPinned, sidebarWidth]);
 
   // Utility to find an item by id
-  const findItemById = (items: NavItem[], id: string): NavItem | undefined => {
+  const findItemById = (items: NavItem[], id: number): NavItem | undefined => {
     for (const item of items) {
       if (item.id === id) return item;
       if (item.children) {
@@ -162,15 +181,16 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   // Move saveConfigurationWithNav above all usages
   const saveConfigurationWithNav = async (navArray: NavItem[]): Promise<void> => {
     try {
-      const config: Partial<SidebarConfig> = {
-        items: navArray,
-        sidebar: {
-          width: sidebarWidth,
-          isPinned,
-          isOpen,
-          togglePosition: { top: configService.getTogglerPosition() }
-        }
+      const config = await configService.loadConfiguration();
+      config.items = navArray;
+      
+      // Update sidebar configuration
+      config.sidebar = {
+        isOpen,
+        isPinned,
+        position: 'left' // We only support left position for now
       };
+      
       const success = await configService.saveConfiguration(config);
       if (success) {
         console.log('✅ Configuration saved successfully');
@@ -183,11 +203,11 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   };
 
   // Handlers for config mode
-  const handleEdit = (id: string): void => {
+  const handleEdit = (id: number): void => {
     const item = findItemById(nav, id);
     if (item) setModalState({ isVisible: true, mode: 'edit', editingItem: item });
   };
-  const handleDelete = (id: string): void => {
+  const handleDelete = (id: number): void => {
     setNav(prevNav => {
       const removeRecursive = (items: NavItem[]): NavItem[] =>
         items.filter(item => {
@@ -203,20 +223,21 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       return updatedNav;
     });
   };
-  const handleAddChild = (parentId: string): void => setModalState({ isVisible: true, mode: 'add', parentId });
+  const handleAddChild = (parentId: number): void => setModalState({ isVisible: true, mode: 'add', parentId });
   const handleAddRoot = (): void => setModalState({ isVisible: true, mode: 'add' });
 
   // Modal save/cancel
-  const handleModalSave = (item: NavItem, parentId?: string): void => {
+  const handleModalSave = (item: NavItem, parentId?: number): void => {
     if (!item.order) item.order = 1;
     if (!item.url) item.url = '';
     setNav(prevNav => {
       let updatedNav: NavItem[];
       if (modalState.mode === 'edit' && item.id) {
+        // monarchNav pattern: replace the entire item by id
         const updateRecursive = (items: NavItem[]): NavItem[] =>
           items.map(it =>
             it.id === item.id
-              ? { ...item, children: it.children, url: item.url || '' }
+              ? { ...item }
               : { ...it, children: it.children ? updateRecursive(it.children) : undefined }
           );
         updatedNav = updateRecursive(prevNav);
@@ -285,7 +306,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         }}
         onDrag={(newTop) => {
           setToggleTop(newTop);
-          configService.setTogglerPosition(newTop); // Store in localStorage only
+          configService.setTogglerPosition(String(newTop)); // Store in localStorage only
         }}
         sidebarWidth={sidebarWidth}
       />
@@ -364,6 +385,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           isVisible={modalState.isVisible}
           mode={modalState.mode}
           item={modalState.editingItem}
+          parentId={modalState.parentId}
           parentOptions={getParentOptions()}
           onSave={handleModalSave}
           onCancel={handleModalCancel}

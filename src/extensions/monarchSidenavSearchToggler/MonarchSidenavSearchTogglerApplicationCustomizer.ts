@@ -8,24 +8,24 @@ import MonarchSidenavSearchToggler from './MonarchSidenavSearchToggler';
 
 import * as strings from 'MonarchSidenavSearchTogglerApplicationCustomizerStrings';
 
-const LOG_SOURCE: string = 'MonarchSidebarNavigationApplicationCustomizer';
+const LOG_SOURCE: string = 'MonarchSideNavSearchTogglerApplicationCustomizer';
 
 /**
  * If your command set uses the ClientSideComponentProperties JSON input,
  * it will be deserialized into the BaseExtension.properties object.
  * You can define an interface to describe it.
  */
-export interface IMonarchSidebarNavigationApplicationCustomizerProperties {
-  // Configuration properties for Monarch Sidebar Navigation
+export interface IMonarchSideNavSearchTogglerApplicationCustomizerProperties {
+  // Configuration properties for Monarch SideNav Search Toggler
   description: string;
 }
 
 /** 
- * Monarch Sidebar Navigation Application Customizer
+ * Monarch SideNav Search Toggler Application Customizer
  * Provides hierarchical sidebar navigation with search functionality and theme customization
  */
-export default class MonarchSidebarNavigationApplicationCustomizer
-  extends BaseApplicationCustomizer<IMonarchSidebarNavigationApplicationCustomizerProperties> {
+export default class MonarchSideNavSearchTogglerApplicationCustomizer
+  extends BaseApplicationCustomizer<IMonarchSideNavSearchTogglerApplicationCustomizerProperties> {
 
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
@@ -61,5 +61,5 @@ export default class MonarchSidebarNavigationApplicationCustomizer
 }
 
 // Legacy interface exports for compatibility
-export interface IMonarchSidenavSearchTogglerApplicationCustomizerProperties extends IMonarchSidebarNavigationApplicationCustomizerProperties {}
-export { MonarchSidebarNavigationApplicationCustomizer as MonarchSidenavSearchTogglerApplicationCustomizer };
+export interface IMonarchSidenavSearchTogglerApplicationCustomizerProperties extends IMonarchSideNavSearchTogglerApplicationCustomizerProperties {}
+export { MonarchSideNavSearchTogglerApplicationCustomizer as MonarchSidenavSearchTogglerApplicationCustomizer };

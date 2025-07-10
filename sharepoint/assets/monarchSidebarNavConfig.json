@@ -1,52 +1,93 @@
 {
-  "theme": {
-    "primaryColor": "#0078d4",
-    "secondaryColor": "#106ebe",
-    "backgroundColor": "#ffffff",
-    "textColor": "#323130",
-    "borderColor": "#edebe9",
-    "hoverColor": "#f3f2f1",
-    "activeColor": "#deecf9",
-    "shadowColor": "rgba(0,0,0,0.1)",
-    "fontFamily": "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    "fontSize": "14px",
-    "borderRadius": "4px",
-    "transitionDuration": "0.2s"
-  },
+  "version": "1.0.0",
   "items": [
     {
-      "id": "documents",
+      "id": 1,
+      "title": "Home",
+      "url": "/",
+      "target": "_self",
+      "order": 1
+    },
+    {
+      "id": 2,
       "title": "Documents",
       "url": "/documents",
-      "order": 1,
+      "target": "_self",
+      "order": 2,
       "children": [
         {
-          "id": "policies",
+          "id": 1,
           "title": "Policies",
           "url": "/documents/policies",
+          "target": "_self",
           "order": 1
         },
         {
-          "id": "procedures",
+          "id": 2,
           "title": "Procedures",
           "url": "/documents/procedures",
+          "target": "_self",
           "order": 2
         }
       ]
     },
     {
-      "id": "resources",
+      "id": 3,
       "title": "Resources",
       "url": "/resources",
-      "order": 2
+      "target": "_self",
+      "order": 3
+    },
+    {
+      "id": 4,
+      "title": "Support",
+      "url": "/support",
+      "target": "_self",
+      "order": 4,
+      "children": [
+        {
+          "id": 1,
+          "title": "Help Desk",
+          "url": "/support/helpdesk",
+          "target": "_self",
+          "order": 1
+        },
+        {
+          "id": 2,
+          "title": "FAQ",
+          "url": "/support/faq",
+          "target": "_self",
+          "order": 2
+        },
+        {
+          "id": 3,
+          "title": "Contact Us",
+          "url": "/support/contact",
+          "target": "_self",
+          "order": 3
+        }
+      ]
     }
   ],
-  "sidebar": {
-    "width": 300,
-    "isPinned": false,
+  "theme": {
+    "primaryColor": "#0078d4",
+    "secondaryColor": "#106ebe",
+    "backgroundColor": "#ffffff",
+    "textColor": "#323130",
+    "hoverColor": "#f3f2f1",
+    "fontFamily": "Segoe UI, system-ui, sans-serif",
+    "fontSize": "14px",
+    "borderRadius": "4px",
+    "sidebarWidth": "300px"
+  },
+  "sidebar":{
     "isOpen": true,
-    "togglePosition": {
-      "top": 20
-    }
-  }
+    "isPinned": false,
+    "position": "left"
+  },
+  "searchEnabled": true,
+  "autoSave": true,
+  "lastModified": "2025-07-09T15:16:00.000Z",
+  "createdBy": "System",
+  "modifiedBy": "System"
 } 

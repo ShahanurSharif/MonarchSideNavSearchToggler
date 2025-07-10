@@ -3,7 +3,7 @@ import { Icon } from '@fluentui/react/lib/Icon';
 import styles from '../MonarchSidenavSearchToggler.module.scss';
 
 export interface NavItem {
-  id: string;
+  id: number;
   title: string;
   url: string;
   order: number;
@@ -14,9 +14,9 @@ interface SidebarNavigationProps {
   items: NavItem[];
   isConfigMode: boolean;
   searchQuery: string;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onAddChild: (id: string) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  onAddChild: (id: number) => void;
   onAddRoot: () => void;
 }
 
@@ -29,12 +29,16 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   onAddChild,
   onAddRoot
 }) => {
-  const [expanded, setExpanded] = React.useState<{ [id: string]: boolean }>({});
+  const [expanded, setExpanded] = React.useState<{ [id: number]: boolean }>({});
 
   const filterItems = (items: NavItem[]): NavItem[] => {
-    if (!searchQuery.trim()) return items;
+    if (!searchQuery.trim()) {
+      // Sort by order when not searching
+      return items.sort((a, b) => a.order - b.order);
+    }
+    
     const q = searchQuery.toLowerCase();
-    return items
+    const filtered = items
       .map(item => {
         const match = item.title.toLowerCase().includes(q) || (item.url?.toLowerCase().includes(q) ?? false);
         const children = item.children ? filterItems(item.children) : undefined;
@@ -44,11 +48,14 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         return null;
       })
       .filter(Boolean) as NavItem[];
+    
+    // Sort filtered results by order
+    return filtered.sort((a, b) => a.order - b.order);
   };
 
   const filteredItems = filterItems(items);
 
-  const handleToggle = (id: string): void => {
+  const handleToggle = (id: number): void => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 

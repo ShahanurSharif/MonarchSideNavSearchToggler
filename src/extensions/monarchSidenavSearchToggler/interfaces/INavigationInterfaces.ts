@@ -1,7 +1,7 @@
 import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
 
 export interface INavigationItem {
-  id: string;
+  id: number;
   title: string;
   url: string;
   icon?: string;
@@ -24,10 +24,17 @@ export interface IThemeConfig {
   // Note: No logo configuration as per requirements
 }
 
+export interface ISidebarConfig {
+  isOpen: boolean;
+  isPinned: boolean;
+  position: 'left' | 'right';
+}
+
 export interface ISidebarNavConfig {
   version: string;
-  navigation: INavigationItem[];
+  items: INavigationItem[];
   theme: IThemeConfig;
+  sidebar: ISidebarConfig;
   searchEnabled: boolean;
   autoSave: boolean;
   lastModified: string;
@@ -39,7 +46,7 @@ export interface IModalState {
   isVisible: boolean;
   mode: 'add' | 'edit' | 'theme' | 'settings';
   editingItem?: INavigationItem;
-  parentId?: string;
+  parentId?: number;
 }
 
 export interface INavigationSearchResult {
@@ -80,30 +87,30 @@ export const DefaultTheme: IThemeConfig = {
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {
   version: '1.0.0',
-  navigation: [
+  items: [
     {
-      id: 'home',
+      id: 1,
       title: 'Home',
       url: '/',
       target: '_self',
       order: 1
     },
     {
-      id: 'documents',
+      id: 2,
       title: 'Documents',
       url: '/documents',
       target: '_self',
       order: 2,
       children: [
         {
-          id: 'policies',
+          id: 1,
           title: 'Policies',
           url: '/documents/policies',
           target: '_self',
           order: 1
         },
         {
-          id: 'procedures',
+          id: 2,
           title: 'Procedures',
           url: '/documents/procedures',
           target: '_self',
@@ -112,14 +119,49 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
       ]
     },
     {
-      id: 'resources',
+      id: 3,
       title: 'Resources',
       url: '/resources',
       target: '_self',
       order: 3
+    },
+    {
+      id: 4,
+      title: 'Support',
+      url: '/support',
+      target: '_self',
+      order: 4,
+      children: [
+        {
+          id: 1,
+          title: 'Help Desk',
+          url: '/support/helpdesk',
+          target: '_self',
+          order: 1
+        },
+        {
+          id: 2,
+          title: 'FAQ',
+          url: '/support/faq',
+          target: '_self',
+          order: 2
+        },
+        {
+          id: 3,
+          title: 'Contact Us',
+          url: '/support/contact',
+          target: '_self',
+          order: 3
+        }
+      ]
     }
   ],
   theme: DefaultTheme,
+  sidebar: {
+    isOpen: true,
+    isPinned: false,
+    position: 'left'
+  },
   searchEnabled: true,
   autoSave: true,
   lastModified: new Date().toISOString(),

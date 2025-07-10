@@ -3,10 +3,10 @@ import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ISidebarNavConfig, DefaultNavigationConfig, INavigationItem } from '../interfaces/INavigationInterfaces';
 
 export class NavigationConfigService {
-  private static readonly CONFIG_FILE_NAME = 'monarchSidebarNav.json';
-  private static readonly CONFIG_LIST_NAME = 'Site Assets';
+  private static readonly CONFIG_FILE_NAME = 'monarchSidebarNavConfig.json';
+  private static readonly CONFIG_LIST_NAME = 'SiteAssets';
   private static readonly CACHE_KEY = 'monarch-sidebar-nav-config';
-  private static readonly CACHE_EXPIRY_HOURS = 24; // Cache expires after 24 hours
+  private static readonly CACHE_EXPIRY_HOURS = 720; // Cache expires after 720 hours
 
   private context: ApplicationCustomizerContext;
 
@@ -22,26 +22,26 @@ export class NavigationConfigService {
       // Try to get from cache first
       const cachedConfig = this.getCachedConfig();
       if (cachedConfig) {
-        console.log('MonarchSidebarNav: Loaded configuration from cache');
+        console.log('MonarchSideNavSearchToggler: Loaded configuration from cache');
         return cachedConfig;
       }
 
       // Try to load from SharePoint
       const config = await this.loadFromSharePoint();
       if (config) {
-        console.log('MonarchSidebarNav: Loaded configuration from SharePoint');
+        console.log('MonarchSideNavSearchToggler: Loaded configuration from SharePoint');
         this.cacheConfig(config);
         return config;
       }
 
       // Fall back to default configuration
-      console.log('MonarchSidebarNav: Using default configuration');
+      console.log('MonarchSideNavSearchToggler: Using default configuration');
       const defaultConfig = this.createDefaultConfig();
       await this.saveConfiguration(defaultConfig);
       return defaultConfig;
 
     } catch (error) {
-      console.error('MonarchSidebarNav: Error loading configuration:', error);
+      console.error('MonarchSideNavSearchToggler: Error loading configuration:', error);
       return this.createDefaultConfig();
     }
   }
@@ -57,15 +57,15 @@ export class NavigationConfigService {
       const success = await this.saveToSharePoint(config);
       if (success) {
         this.cacheConfig(config);
-        console.log('MonarchSidebarNav: Configuration saved successfully');
+        console.log('MonarchSideNavSearchToggler: Configuration saved successfully');
         return true;
       }
 
-      console.error('MonarchSidebarNav: Failed to save configuration');
+      console.error('MonarchSideNavSearchToggler: Failed to save configuration');
       return false;
 
     } catch (error) {
-      console.error('MonarchSidebarNav: Error saving configuration:', error);
+      console.error('MonarchSideNavSearchToggler: Error saving configuration:', error);
       return false;
     }
   }
@@ -78,20 +78,39 @@ export class NavigationConfigService {
       return false;
     }
 
-    const requiredFields = ['version', 'navigation', 'theme', 'searchEnabled', 'autoSave'];
+    const configObj = config as Record<string, unknown>;
+
+    // Handle migration from old "navigation" property to new "items" property
+    if (configObj.navigation && !configObj.items) {
+      console.log('MonarchSideNavSearchToggler: Migrating from navigation to items property');
+      configObj.items = configObj.navigation;
+      delete configObj.navigation;
+    }
+
+    // Add default sidebar configuration if missing
+    if (!configObj.sidebar) {
+      console.log('MonarchSideNavSearchToggler: Adding default sidebar configuration');
+      configObj.sidebar = {
+        isOpen: true,
+        isPinned: false,
+        position: 'left'
+      };
+    }
+
+    const requiredFields = ['version', 'items', 'theme', 'searchEnabled', 'autoSave'];
     for (const field of requiredFields) {
-      if (!(field in config)) {
-        console.warn(`MonarchSidebarNav: Missing required field: ${field}`);
+      if (!(field in configObj)) {
+        console.warn(`MonarchSideNavSearchToggler: Missing required field: ${field}`);
         return false;
       }
     }
 
-    if (!Array.isArray((config as ISidebarNavConfig).navigation)) {
-      console.warn('MonarchSidebarNav: Navigation must be an array');
+    if (!Array.isArray(configObj.items)) {
+      console.warn('MonarchSideNavSearchToggler: Items must be an array');
       return false;
     }
 
-    return this.validateNavigationItems((config as ISidebarNavConfig).navigation);
+    return this.validateNavigationItems(configObj.items);
   }
 
   /**
@@ -125,7 +144,7 @@ export class NavigationConfigService {
   /**
    * Gets navigation item by ID (recursive search)
    */
-  public findNavigationItemById(items: INavigationItem[], id: string): INavigationItem | undefined {
+  public findNavigationItemById(items: INavigationItem[], id: number): INavigationItem | undefined {
     for (const item of items) {
       if (item.id === id) {
         return item;
@@ -144,10 +163,10 @@ export class NavigationConfigService {
   /**
    * Adds a new navigation item (immutable, monarchNav convention)
    */
-  public addNavigationItem(config: ISidebarNavConfig, newItem: INavigationItem, parentId?: string): boolean {
+  public addNavigationItem(config: ISidebarNavConfig, newItem: INavigationItem, parentId?: number): boolean {
     try {
       if (!newItem.id) {
-        newItem.id = this.generateUniqueId(config.navigation);
+        newItem.id = this.generateUniqueId(config.items);
       }
       if (parentId) {
         // Add to parent's children immutably
@@ -157,15 +176,15 @@ export class NavigationConfigService {
               ? { ...item, children: [...(item.children || []), newItem].sort((a, b) => a.order - b.order) }
               : { ...item, children: item.children ? updateChildren(item.children) : undefined }
           );
-        config.navigation = updateChildren(config.navigation);
+        config.items = updateChildren(config.items);
         return true;
       } else {
         // Add to root level immutably
-        config.navigation = [...config.navigation, newItem].sort((a, b) => a.order - b.order);
+        config.items = [...config.items, newItem].sort((a, b) => a.order - b.order);
         return true;
       }
     } catch (error) {
-      console.error('MonarchSidebarNav: Error adding navigation item:', error);
+      console.error('MonarchSideNavSearchToggler: Error adding navigation item:', error);
       return false;
     }
   }
@@ -181,10 +200,10 @@ export class NavigationConfigService {
             ? { ...updatedItem }
             : { ...item, children: item.children ? updateRecursive(item.children) : undefined }
         );
-      config.navigation = updateRecursive(config.navigation);
+      config.items = updateRecursive(config.items);
       return true;
     } catch (error) {
-      console.error('MonarchSidebarNav: Error updating navigation item:', error);
+      console.error('MonarchSideNavSearchToggler: Error updating navigation item:', error);
       return false;
     }
   }
@@ -192,7 +211,7 @@ export class NavigationConfigService {
   /**
    * Removes a navigation item by ID (immutable, monarchNav convention)
    */
-  public removeNavigationItem(config: ISidebarNavConfig, id: string): boolean {
+  public removeNavigationItem(config: ISidebarNavConfig, id: number): boolean {
     try {
       // Recursively filter out the item with the given id
       const removeRecursive = (items: INavigationItem[]): INavigationItem[] =>
@@ -202,16 +221,16 @@ export class NavigationConfigService {
             ...item,
             children: item.children ? removeRecursive(item.children) : undefined
           }));
-      const newNavigation = removeRecursive(config.navigation);
+      const newNavigation = removeRecursive(config.items);
       // Only update if something was actually removed
-      if (newNavigation.length !== config.navigation.length ||
-          JSON.stringify(newNavigation) !== JSON.stringify(config.navigation)) {
-        config.navigation = newNavigation;
+      if (newNavigation.length !== config.items.length ||
+          JSON.stringify(newNavigation) !== JSON.stringify(config.items)) {
+        config.items = newNavigation;
         return true;
       }
       return false;
     } catch (error) {
-      console.error('MonarchSidebarNav: Error removing navigation item:', error);
+      console.error('MonarchSideNavSearchToggler: Error removing navigation item:', error);
       return false;
     }
   }
@@ -219,18 +238,18 @@ export class NavigationConfigService {
   /**
    * Adds a new navigation item and saves to SharePoint (monarchNav convention)
    */
-  public async addAndSaveNavigationItem(newItem: INavigationItem, parentId?: string): Promise<boolean> {
+  public async addAndSaveNavigationItem(newItem: INavigationItem, parentId?: number): Promise<boolean> {
     // Always load the latest config from SharePoint
     const config = await this.loadConfiguration();
     const success = this.addNavigationItem(config, newItem, parentId);
     if (success) {
       const saved = await this.saveConfiguration(config);
       if (saved) {
-        console.log('MonarchSidebarNav: Navigation item added and saved successfully');
+        console.log('MonarchSideNavSearchToggler: Navigation item added and saved successfully');
         return true;
       }
     }
-    console.error('MonarchSidebarNav: Failed to add and save navigation item');
+    console.error('MonarchSideNavSearchToggler: Failed to add and save navigation item');
     return false;
   }
 
@@ -243,28 +262,28 @@ export class NavigationConfigService {
     if (success) {
       const saved = await this.saveConfiguration(config);
       if (saved) {
-        console.log('MonarchSidebarNav: Navigation item updated and saved successfully');
+        console.log('MonarchSideNavSearchToggler: Navigation item updated and saved successfully');
         return true;
       }
     }
-    console.error('MonarchSidebarNav: Failed to update and save navigation item');
+    console.error('MonarchSideNavSearchToggler: Failed to update and save navigation item');
     return false;
   }
 
   /**
    * Removes a navigation item by ID and saves to SharePoint (monarchNav convention)
    */
-  public async removeAndSaveNavigationItem(id: string): Promise<boolean> {
+  public async removeAndSaveNavigationItem(id: number): Promise<boolean> {
     const config = await this.loadConfiguration();
     const success = this.removeNavigationItem(config, id);
     if (success) {
       const saved = await this.saveConfiguration(config);
       if (saved) {
-        console.log('MonarchSidebarNav: Navigation item removed and saved successfully');
+        console.log('MonarchSideNavSearchToggler: Navigation item removed and saved successfully');
         return true;
       }
     }
-    console.error('MonarchSidebarNav: Failed to remove and save navigation item');
+    console.error('MonarchSideNavSearchToggler: Failed to remove and save navigation item');
     return false;
   }
 
@@ -275,7 +294,7 @@ export class NavigationConfigService {
     try {
       return localStorage.getItem('monarch-sidebar-toggler-position') || undefined;
     } catch (error) {
-      console.warn('MonarchSidebarNav: Failed to get toggler position from localStorage:', error);
+      console.warn('MonarchSideNavSearchToggler: Failed to get toggler position from localStorage:', error);
       return undefined;
     }
   }
@@ -287,7 +306,7 @@ export class NavigationConfigService {
     try {
       localStorage.setItem('monarch-sidebar-toggler-position', position);
     } catch (error) {
-      console.warn('MonarchSidebarNav: Failed to set toggler position in localStorage:', error);
+      console.warn('MonarchSideNavSearchToggler: Failed to set toggler position in localStorage:', error);
     }
   }
 
@@ -296,23 +315,34 @@ export class NavigationConfigService {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
       const fileUrl = `${siteUrl}/${NavigationConfigService.CONFIG_LIST_NAME}/${NavigationConfigService.CONFIG_FILE_NAME}`;
       
+      console.log('MonarchSideNavSearchToggler: Attempting to load config from:', fileUrl);
+      
       const response: SPHttpClientResponse = await this.context.spHttpClient.get(
         fileUrl,
         SPHttpClient.configurations.v1
       );
 
+      console.log('MonarchSideNavSearchToggler: SharePoint response status:', response.status, response.statusText);
+
       if (response.ok) {
         const configText = await response.text();
+        console.log('MonarchSideNavSearchToggler: Raw config text length:', configText.length);
         const config = JSON.parse(configText);
+        console.log('MonarchSideNavSearchToggler: Parsed config:', config);
         
         if (this.validateConfiguration(config)) {
+          console.log('MonarchSideNavSearchToggler: Configuration validation passed');
           return config;
+        } else {
+          console.warn('MonarchSideNavSearchToggler: Configuration validation failed');
         }
+      } else {
+        console.warn('MonarchSideNavSearchToggler: Failed to fetch config file. Status:', response.status);
       }
 
       return undefined;
     } catch (error) {
-      console.warn('MonarchSidebarNav: Could not load configuration from SharePoint:', error);
+      console.warn('MonarchSideNavSearchToggler: Could not load configuration from SharePoint:', error);
       return undefined;
     }
   }
@@ -326,6 +356,11 @@ export class NavigationConfigService {
 
       // Use REST API to save file to Site Assets library
       const uploadUrl = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${serverRelativeUrl}')/Files/add(overwrite=true,url='${NavigationConfigService.CONFIG_FILE_NAME}')`;
+
+      // Console logging for debugging - log navigation object and entire config
+      console.log('MonarchSideNavSearchToggler: About to save to SharePoint - Navigation object:', config.items);
+      console.log('MonarchSideNavSearchToggler: About to save to SharePoint - Full config data:', config);
+      console.log('MonarchSideNavSearchToggler: About to save to SharePoint - JSON string length:', configJson.length);
 
       const response: SPHttpClientResponse = await this.context.spHttpClient.post(
         uploadUrl,
@@ -342,12 +377,12 @@ export class NavigationConfigService {
         } catch {
           // Intentionally ignore error when reading error text
         }
-        console.error(`MonarchSidebarNav: Save failed. Status: ${response.status} ${response.statusText}. Body: ${errorText}`);
+        console.error(`MonarchSideNavSearchToggler: Save failed. Status: ${response.status} ${response.statusText}. Body: ${errorText}`);
       }
 
       return response.ok;
     } catch (error) {
-      console.error('MonarchSidebarNav: Error saving to SharePoint:', error);
+      console.error('MonarchSideNavSearchToggler: Error saving to SharePoint:', error);
       return false;
     }
   }
@@ -374,7 +409,7 @@ export class NavigationConfigService {
 
       return undefined;
     } catch (error) {
-      console.warn('MonarchSidebarNav: Error reading cached config:', error);
+      console.warn('MonarchSideNavSearchToggler: Error reading cached config:', error);
       return undefined;
     }
   }
@@ -389,7 +424,7 @@ export class NavigationConfigService {
       };
       localStorage.setItem(NavigationConfigService.CACHE_KEY, JSON.stringify(cacheData));
     } catch (error) {
-      console.warn('MonarchSidebarNav: Failed to cache config:', error);
+      console.warn('MonarchSideNavSearchToggler: Failed to cache config:', error);
     }
   }
 
@@ -404,7 +439,7 @@ export class NavigationConfigService {
   private validateNavigationItems(items: INavigationItem[]): boolean {
     for (const item of items) {
       if (!item.id || !item.title || !item.url || typeof item.order !== 'number') {
-        console.warn('MonarchSidebarNav: Invalid navigation item:', item);
+        console.warn('MonarchSideNavSearchToggler: Invalid navigation item:', item);
         return false;
       }
 
@@ -415,9 +450,9 @@ export class NavigationConfigService {
     return true;
   }
 
-  private generateUniqueId(existingItems: INavigationItem[]): string {
-    const getAllIds = (items: INavigationItem[]): string[] => {
-      let ids: string[] = [];
+  private generateUniqueId(existingItems: INavigationItem[]): number {
+    const getAllIds = (items: INavigationItem[]): number[] => {
+      let ids: number[] = [];
       for (const item of items) {
         ids.push(item.id);
         if (item.children) {
@@ -428,14 +463,7 @@ export class NavigationConfigService {
     };
 
     const existingIds = getAllIds(existingItems);
-    let counter = 1;
-    let newId = `nav-item-${counter}`;
-    
-    while (existingIds.indexOf(newId) !== -1) {
-      counter++;
-      newId = `nav-item-${counter}`;
-    }
-
-    return newId;
+    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+    return maxId + 1;
   }
 }
