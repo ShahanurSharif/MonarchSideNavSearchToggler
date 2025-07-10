@@ -161,11 +161,12 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
         </div>
 
         <div className={styles.modalFooter}>
-          <DefaultButton
-            text="Reset to Default"
-            onClick={this.props.onReset}
-            styles={{ root: { marginRight: 'auto' } }}
-          />
+          <div style={{ marginRight: 'auto' }}>
+            <DefaultButton
+              text="Reset to Default"
+              onClick={this.props.onReset}
+            />
+          </div>
           <PrimaryButton
             text="Save Changes"
             onClick={this.onSave}
