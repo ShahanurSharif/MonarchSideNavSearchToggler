@@ -10,6 +10,7 @@ export interface NavItem {
   id: number;
   title: string;
   url: string;
+  target?: '_blank' | '_self';
   order: number;
   children?: NavItem[];
   openIn?: string;

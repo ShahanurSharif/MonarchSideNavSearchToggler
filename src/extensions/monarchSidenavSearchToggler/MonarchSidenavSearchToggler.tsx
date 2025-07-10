@@ -12,6 +12,7 @@ import { NavigationConfigService } from './services/NavigationConfigService';
 export interface NavItem {
   id: number;
   title: string;
+  target?: '_blank' | '_self'; // Optional target for links
   url: string;
   order: number;
   children?: NavItem[];
@@ -79,16 +80,35 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       // Use default values if loading fails
       setNav([
         {
-          id: 1,
-          title: 'Documents',
-          url: '/documents',
-          order: 1,
-          children: [
-            { id: 1, title: 'Policies', url: '/documents/policies', order: 1 },
-            { id: 2, title: 'Procedures', url: '/documents/procedures', order: 2 }
+          "id": 1,
+          "title": "Home",
+          "url": "/",
+          "target": "_self",
+          "order": 1
+        },
+        {
+          "id": 2,
+          "title": "Documents",
+          "url": "/documents",
+          "target": "_self",
+          "order": 2,
+          "children": [
+            {
+              "id": 1,
+              "title": "Policies",
+              "url": "/documents/policies",
+              "target": "_self",
+              "order": 1
+            },
+            {
+              "id": 2,
+              "title": "Procedures",
+              "url": "/documents/procedures",
+              "target": "_self",
+              "order": 2
+            }
           ]
         },
-        { id: 2, title: 'Resources', url: '/resources', order: 2 }
       ]);
       setIsOpen(true);
       setIsPinned(false);

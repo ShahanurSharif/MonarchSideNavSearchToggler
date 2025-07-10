@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
   "solution": {
-    "name": "monarch-sidenav-search-toggler-client-side-solution",
+    "name": "monarch-sidenav",
     "id": "020453a9-06f3-4b81-8718-fc18dbeb8d15",
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
@@ -16,10 +16,10 @@
     },
     "metadata": {
       "shortDescription": {
-        "default": "monarch-sidenav-search-toggler description"
+        "default": "monarch-sidenav description"
       },
       "longDescription": {
-        "default": "monarch-sidenav-search-toggler description"
+        "default": "monarch-sidenav description"
       },
       "screenshotPaths": [],
       "videoUrl": "",
@@ -44,6 +44,6 @@
     ]
   },
   "paths": {
-    "zippedPackage": "solution/monarch-sidenav-search-toggler.sppkg"
+    "zippedPackage": "solution/monarch-sidenav.sppkg"
   }
 }
