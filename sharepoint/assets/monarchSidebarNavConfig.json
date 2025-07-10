@@ -83,7 +83,10 @@
     "fontFamily": "Segoe UI, system-ui, sans-serif",
     "fontSize": "14px",
     "borderRadius": "4px",
-    "sidebarWidth": "300px"
+    "sidebarWidth": "300px",
+    "borderEnabled": false,
+    "borderColor": "#d2d0ce",
+    "paddingTopBottom": "2px"
   },
   "sidebar":{
     "isOpen": true,

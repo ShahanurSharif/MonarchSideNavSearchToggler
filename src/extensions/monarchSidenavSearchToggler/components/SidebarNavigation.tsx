@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Icon } from '@fluentui/react/lib/Icon';
 import styles from '../MonarchSidenavSearchToggler.module.scss';
+import { IThemeConfig } from '../interfaces/INavigationInterfaces';
 
 export interface NavItem {
   id: number;
@@ -18,6 +19,7 @@ interface SidebarNavigationProps {
   onDelete: (id: number) => void;
   onAddChild: (id: number) => void;
   onAddRoot: () => void;
+  theme: IThemeConfig;
 }
 
 export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
@@ -27,7 +29,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   onEdit,
   onDelete,
   onAddChild,
-  onAddRoot
+  onAddRoot,
+  theme
 }) => {
   const [expanded, setExpanded] = React.useState<{ [id: number]: boolean }>({});
 
@@ -114,13 +117,22 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   };
 
   return (
-    <ul className={styles.navigationList}>
+    <ul className={styles.navigationList} style={{
+      backgroundColor: theme.backgroundColor,
+      color: theme.textColor,
+      fontSize: theme.fontSize,
+      fontFamily: theme.fontFamily
+    }}>
       {rootItems.map(item => {
         const children = childItems[item.id] || [];
         const hasChildren = children.length > 0;
         
         return (
-          <li className={styles.navItem} key={item.id}>
+          <li className={styles.navItem} key={item.id} style={{
+            borderBottom: theme.borderEnabled ? `1px solid ${theme.borderColor}` : 'none',
+            padding: `${theme.paddingTopBottom} 0`,
+            margin: '0 10px'
+          }}>
             <div className={styles.navItemContent}>
               {hasChildren ? (
                 <button
@@ -139,11 +151,11 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
               )}
               {/* Only the title is inside the link */}
               {item.url ? (
-                <a href={item.url} className={styles.navLink} target="_self">
+                <a href={item.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize }}>
                   <span className={styles.navTitle}>{item.title}</span>
                 </a>
               ) : (
-                <span className={styles.navTitle}>{item.title}</span>
+                <span className={styles.navTitle} style={{ fontSize: theme.fontSize }}>{item.title}</span>
               )}
               {isConfigMode && (
                 <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
@@ -162,15 +174,18 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             {hasChildren && expanded[item.id] && (
               <ul className={styles.navChildren}>
                 {children.map(child => (
-                  <li className={styles.navItem} key={child.id}>
+                  <li className={styles.navItem} key={child.id} style={{
+                    padding: `${theme.paddingTopBottom} 0`,
+                    margin: '0 10px'
+                  }}>
                     <div className={styles.navItemContent}>
                       <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
                       {child.url ? (
-                        <a href={child.url} className={styles.navLink} target="_self">
+                        <a href={child.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize }}>
                           <span className={styles.navTitle}>{child.title}</span>
                         </a>
                       ) : (
-                        <span className={styles.navTitle}>{child.title}</span>
+                        <span className={styles.navTitle} style={{ fontSize: theme.fontSize }}>{child.title}</span>
                       )}
                       {isConfigMode && (
                         <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>

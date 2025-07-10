@@ -21,6 +21,9 @@ export interface IThemeConfig {
   fontSize: string;
   borderRadius: string;
   sidebarWidth: string;
+  borderEnabled: boolean;
+  borderColor: string;
+  paddingTopBottom: string;
   // Note: No logo configuration as per requirements
 }
 
@@ -82,7 +85,10 @@ export const DefaultTheme: IThemeConfig = {
   fontFamily: 'Segoe UI, system-ui, sans-serif',
   fontSize: '14px',
   borderRadius: '4px',
-  sidebarWidth: '300px'
+  sidebarWidth: '300px',
+  borderEnabled: false,
+  borderColor: '#d2d0ce',
+  paddingTopBottom: '2px'
 };
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {

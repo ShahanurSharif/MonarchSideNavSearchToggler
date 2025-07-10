@@ -108,14 +108,7 @@ export class ThemeConfigModal extends React.Component<IThemeConfigModalProps, IT
             </MessageBar>
           )}
 
-          <div className={styles.themePreview} style={this.getPreviewStyles()}>
-            <div className={styles.previewHeader}>Preview</div>
-            <div className={styles.previewNavItem}>Home</div>
-            <div className={styles.previewNavItem}>Documents</div>
-            <div className={`${styles.previewNavItem} active`}>Resources</div>
-          </div>
 
-          <Separator />
 
           <div className={`${styles.formSection} ${styles.themeFormSection}`}>
             <h3>Colors</h3>
@@ -263,19 +256,7 @@ export class ThemeConfigModal extends React.Component<IThemeConfigModalProps, IT
     );
   }
 
-  private getPreviewStyles(): React.CSSProperties {
-    const { formData } = this.state;
-    return {
-      backgroundColor: formData.backgroundColor,
-      color: formData.textColor,
-      fontFamily: formData.fontFamily,
-      fontSize: formData.fontSize,
-      borderRadius: formData.borderRadius,
-      border: `1px solid ${formData.hoverColor}`,
-      padding: '16px',
-      marginBottom: '16px'
-    };
-  }
+
 
   private onPrimaryColorChange = (ev: React.SyntheticEvent<HTMLElement>, color: { str: string }): void => {
     this.updateThemeProperty('primaryColor', color.str);

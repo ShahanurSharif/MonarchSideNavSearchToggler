@@ -3,10 +3,12 @@ import { ApplicationCustomizerContext } from '@microsoft/sp-application-base';
 import { SidebarNavigation } from './components/SidebarNavigation';
 import { SidebarToggleButton } from './components/SidebarToggleButton';
 import { NavigationConfigModal } from './components/NavigationConfigModal';
+import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import styles from './MonarchSidenavSearchToggler.module.scss';
 import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { Icon } from '@fluentui/react/lib/Icon';
 import { NavigationConfigService } from './services/NavigationConfigService';
+import { DefaultTheme, IThemeConfig } from './interfaces/INavigationInterfaces';
 
 // Extend NavItem to include 'order' and require 'url'
 export interface NavItem {
@@ -39,6 +41,8 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     parentId?: number;
     parentTitle?: string;
   }>({ isVisible: false, mode: 'add' });
+  const [themeModalVisible, setThemeModalVisible] = React.useState(false);
+  const [currentTheme, setCurrentTheme] = React.useState(DefaultTheme);
   const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isPinned, setIsPinned] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -65,12 +69,16 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', config.sidebar.isOpen, 'isPinned:', config.sidebar.isPinned);
       }
       
-      // Set sidebar width from theme
-      if (config.theme && config.theme.sidebarWidth) {
-        const width = parseInt(config.theme.sidebarWidth.replace('px', ''), 10);
-        if (!isNaN(width)) {
-          setSidebarWidth(width);
-          console.log('MonarchSideNavSearchToggler: Set sidebar width:', width);
+      // Set theme configuration
+      if (config.theme) {
+        setCurrentTheme(config.theme);
+        // Set sidebar width from theme
+        if (config.theme.sidebarWidth) {
+          const width = parseInt(config.theme.sidebarWidth.replace('px', ''), 10);
+          if (!isNaN(width)) {
+            setSidebarWidth(width);
+            console.log('MonarchSideNavSearchToggler: Set sidebar width:', width);
+          }
         }
       }
       
@@ -142,6 +150,9 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         position: 'left' // We only support left position for now
       };
       
+      // Update theme configuration
+      config.theme = currentTheme;
+      
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -205,6 +216,9 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         isPinned,
         position: 'left' // We only support left position for now
       };
+      
+      // Update theme configuration
+      config.theme = currentTheme;
       
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -292,6 +306,25 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   };
   const handleModalCancel = (): void => setModalState({ ...modalState, isVisible: false });
 
+  // Theme handlers
+  const handleThemeSave = (theme: IThemeConfig): void => {
+    setCurrentTheme(theme);
+    setThemeModalVisible(false);
+    // Save theme to configuration
+    saveConfiguration().catch(error => {
+      console.error('Failed to save theme configuration:', error);
+    });
+  };
+
+  const handleThemeChange = (theme: IThemeConfig): void => {
+    // Reactive updates without saving
+    setCurrentTheme(theme);
+  };
+
+  const handleThemeReset = (): void => {
+    setCurrentTheme(DefaultTheme);
+  };
+
   // Show loading state
   if (isLoading) {
     return (
@@ -346,7 +379,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           height: '100vh',
           zIndex: 2000,
           width: sidebarWidth,
-          background: '#fff',
+          background: currentTheme.backgroundColor,
           boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
           transition: 'left 0.3s'
         }}
@@ -376,9 +409,14 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                 <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
               </button>
               {isConfig && (
-                <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
-                  <Icon iconName="Add" />
-                </button>
+                <>
+                  <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
+                    <Icon iconName="Add" />
+                  </button>
+                  <button className={styles.headerButton} aria-label="Theme Settings" title="Theme Settings" onClick={() => setThemeModalVisible(true)} style={{marginRight: 8}}>
+                    <Icon iconName="Settings" />
+                  </button>
+                </>
               )}
               <button className={styles.headerButton} aria-label="Edit Mode" title="Edit Navigation" onClick={() => setIsConfig(c => !c)}>
                 <Icon iconName="Edit" />
@@ -403,6 +441,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
               onDelete={handleDelete}
               onAddChild={handleAddChild}
               onAddRoot={handleAddRoot}
+              theme={currentTheme}
             />
           </div>
         </div>
@@ -417,6 +456,16 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           parentOptions={getParentOptions()}
           onSave={handleModalSave}
           onCancel={handleModalCancel}
+        />
+      )}
+      {themeModalVisible && (
+        <ThemeSettingsModal
+          isVisible={themeModalVisible}
+          theme={currentTheme}
+          onSave={handleThemeSave}
+          onCancel={() => setThemeModalVisible(false)}
+          onReset={handleThemeReset}
+          onThemeChange={handleThemeChange}
         />
       )}
     </>
