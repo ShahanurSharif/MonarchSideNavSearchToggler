@@ -34,6 +34,36 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 }) => {
   const [expanded, setExpanded] = React.useState<{ [id: number]: boolean }>({});
 
+  // Get current URL for active state detection
+  const currentUrl = typeof window !== 'undefined' ? window.location.pathname : '';
+
+  // Helper function to check if an item is active
+  const isItemActive = (itemUrl: string): boolean => {
+    if (!itemUrl || !currentUrl) return false;
+    
+    // Normalize URLs for comparison
+    const normalizedItemUrl = itemUrl.replace(/\/$/, ''); // Remove trailing slash
+    const normalizedCurrentUrl = currentUrl.replace(/\/$/, ''); // Remove trailing slash
+    
+    // Exact match
+    if (normalizedItemUrl === normalizedCurrentUrl) return true;
+    
+    // Handle SharePoint redirects and variations
+    const itemUrlWithoutForms = normalizedItemUrl.replace(/\/Forms\/.*$/, ''); // Remove /Forms/AllItems.aspx
+    const currentUrlWithoutForms = normalizedCurrentUrl.replace(/\/Forms\/.*$/, ''); // Remove /Forms/AllItems.aspx
+    
+    // Match without Forms suffix
+    if (itemUrlWithoutForms === currentUrlWithoutForms) return true;
+    
+    // Check if current URL starts with item URL (for parent items)
+    if (normalizedItemUrl !== '/' && normalizedCurrentUrl.startsWith(normalizedItemUrl)) return true;
+    
+    // Check if current URL starts with item URL without Forms (for parent items)
+    if (itemUrlWithoutForms !== '/' && normalizedCurrentUrl.startsWith(itemUrlWithoutForms)) return true;
+    
+    return false;
+  };
+
   // Helper function to get children of a parent item
   const getChildren = (parentId: number): NavItem[] => {
     return items
@@ -127,13 +157,14 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         const children = childItems[item.id] || [];
         const hasChildren = children.length > 0;
         
+        const isActive = isItemActive(item.url);
         return (
-          <li className={styles.navItem} key={item.id} style={{
+          <li className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`} key={item.id} style={{
             borderBottom: theme.borderEnabled ? `1px solid ${theme.borderColor}` : 'none',
             padding: `${theme.paddingTopBottom} 0`,
             margin: '0 6px'
           }}>
-            <div className={styles.navItemContent} style={{ color: theme.textColor }}>
+            <div className={`${styles.navItemContent} ${isActive ? styles.navItemContentActive : ''}`} style={{ color: theme.textColor }}>
               {hasChildren ? (
                 <button
                   className={styles.expandButton}
@@ -174,12 +205,14 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             </div>
             {hasChildren && expanded[item.id] && (
               <ul className={styles.navChildren}>
-                {children.map(child => (
-                  <li className={styles.navItem} key={child.id} style={{
-                    padding: `${theme.paddingTopBottom} 0`,
-                    margin: '0 0'
-                  }}>
-                    <div className={styles.navItemContent} style={{ color: theme.textColor }}>
+                {children.map(child => {
+                  const isChildActive = isItemActive(child.url);
+                  return (
+                    <li className={`${styles.navItem} ${isChildActive ? styles.navItemActive : ''}`} key={child.id} style={{
+                      padding: `${theme.paddingTopBottom} 0`,
+                      margin: '0 0'
+                    }}>
+                      <div className={`${styles.navItemContent} ${isChildActive ? styles.navItemContentActive : ''}`} style={{ color: theme.textColor }}>
                       <span className="nav-spacer" style={{ width: 5, display: 'inline-block' }}></span>
                       {child.url ? (
                         <a href={child.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize, color: theme.textColor }}>
@@ -200,7 +233,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       )}
                     </div>
                   </li>
-                ))}
+                );
+                })}
               </ul>
             )}
           </li>

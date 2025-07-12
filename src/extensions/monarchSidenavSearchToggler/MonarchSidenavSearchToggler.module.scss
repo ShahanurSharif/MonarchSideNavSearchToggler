@@ -221,6 +221,11 @@
   position: relative;
 }
 
+.navItemActive {
+  background: rgba(0, 120, 212, 0.1);
+  border-left: 3px solid #0078d4;
+}
+
 .navItemContent {
   display: flex;
   align-items: center;
@@ -240,6 +245,15 @@
   }
 }
 
+.navItemContentActive {
+  background: rgba(0, 120, 212, 0.1);
+  font-weight: 600;
+  
+  .navTitle {
+    color: #0078d4 !important;
+  }
+}
+
 .expandButton {
   background: transparent;
   border: none;
@@ -256,7 +270,6 @@
   transition: color 0.2s;
 
   &:hover, &:focus {
-    color: #0078d4;
     outline: none;
   }
 }
@@ -276,9 +289,8 @@
   }
   
   &:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: -2px;
-    border-radius: var(--border-radius);
+    outline: none;
+    border: none;
   }
 }
 
