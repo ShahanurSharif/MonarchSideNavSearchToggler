@@ -386,6 +386,30 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       >
         <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
+          </div>
+          <div className={styles.searchContainer}>
+            <Icon iconName="Search" className={styles.searchIcon} />
+            <input
+              type="text"
+              placeholder="Search navigation..."
+              className={styles.searchInput}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className={styles.navigationContent}>
+            <SidebarNavigation
+              items={nav}
+              isConfigMode={isConfig}
+              searchQuery={search}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onAddChild={handleAddChild}
+              onAddRoot={handleAddRoot}
+              theme={currentTheme}
+            />
+          </div>
+          <div className={styles.sidebarFooter}>
             <h2 className={styles.sidebarTitle}>Navigation</h2>
             <div className={styles.headerButtons}>
               <button
@@ -422,28 +446,6 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                 <Icon iconName="Edit" />
               </button>
             </div>
-          </div>
-          <div className={styles.searchContainer}>
-            <Icon iconName="Search" className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Search navigation..."
-              className={styles.searchInput}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div className={styles.navigationContent}>
-            <SidebarNavigation
-              items={nav}
-              isConfigMode={isConfig}
-              searchQuery={search}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onAddChild={handleAddChild}
-              onAddRoot={handleAddRoot}
-              theme={currentTheme}
-            />
           </div>
         </div>
       </div>

@@ -92,6 +92,17 @@
   min-height: 32px;
 }
 
+// Sidebar Footer
+.sidebarFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 20px;
+  border-top: 1px solid #edebe9;
+  min-height: 32px;
+  margin-top: auto;
+}
+
 .sidebarTitle {
   margin: 0;
   font-size: 13px;

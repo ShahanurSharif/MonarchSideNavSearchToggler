@@ -131,7 +131,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           <li className={styles.navItem} key={item.id} style={{
             borderBottom: theme.borderEnabled ? `1px solid ${theme.borderColor}` : 'none',
             padding: `${theme.paddingTopBottom} 0`,
-            margin: '0 10px'
+            margin: '0 6px'
           }}>
             <div className={styles.navItemContent} style={{ color: theme.textColor }}>
               {hasChildren ? (
