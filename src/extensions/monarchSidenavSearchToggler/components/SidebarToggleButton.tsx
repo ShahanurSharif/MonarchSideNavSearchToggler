@@ -75,33 +75,14 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
       ref={btnRef}
       className={styles.sidebarToggleButton}
       style={{
-        position: 'fixed',
         top,
-        left: isOpen ? sidebarWidth : 0,
-        zIndex: 2001,
-        background: 'rgba(243, 242, 241, 0.5)',
-        border: 0,
-        borderRadius: 2,
-        minWidth: 21,
-        minHeight: 48,
-        width: 23,
-        height: 48,
-        padding: '0 2px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        boxSizing: 'border-box',
-        color: '#323130',
-        userSelect: 'none',
-        cursor: 'grab',
-        transition: 'left 0.3s',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+        left: isOpen ? sidebarWidth : 0
       }}
       aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
       onClick={handleClick}
       type="button"
     >
-      {isOpen ? '←' : '☰'}
+      {isOpen ? '|||' : '|||'}
     </button>
   );
 }; 

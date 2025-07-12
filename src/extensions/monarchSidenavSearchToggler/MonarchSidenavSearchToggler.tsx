@@ -424,6 +424,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
             </div>
           </div>
           <div className={styles.searchContainer}>
+            <Icon iconName="Search" className={styles.searchIcon} />
             <input
               type="text"
               placeholder="Search navigation..."

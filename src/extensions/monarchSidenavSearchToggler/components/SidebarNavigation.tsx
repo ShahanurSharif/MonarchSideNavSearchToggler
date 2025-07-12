@@ -133,29 +133,30 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             padding: `${theme.paddingTopBottom} 0`,
             margin: '0 10px'
           }}>
-            <div className={styles.navItemContent}>
+            <div className={styles.navItemContent} style={{ color: theme.textColor }}>
               {hasChildren ? (
                 <button
                   className={styles.expandButton}
                   aria-label="Expand/collapse"
                   onClick={() => handleToggle(item.id)}
+                  style={{ color: theme.textColor }}
                 >
                   {expanded[item.id] ? (
-                    <Icon iconName="ChevronDown" />
+                    <Icon iconName="ChevronDown" style={{ color: theme.textColor }} />
                   ) : (
-                    <Icon iconName="ChevronRight" />
+                    <Icon iconName="ChevronRight" style={{ color: theme.textColor }} />
                   )}
                 </button>
               ) : (
-                <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
+                <span className="nav-spacer" style={{ width: 5, display: 'inline-block' }}></span>
               )}
               {/* Only the title is inside the link */}
               {item.url ? (
-                <a href={item.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize }}>
-                  <span className={styles.navTitle}>{item.title}</span>
+                <a href={item.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize, color: theme.textColor }}>
+                  <span className={styles.navTitle} style={{ color: theme.textColor }}>{item.title}</span>
                 </a>
               ) : (
-                <span className={styles.navTitle} style={{ fontSize: theme.fontSize }}>{item.title}</span>
+                <span className={styles.navTitle} style={{ fontSize: theme.fontSize, color: theme.textColor }}>{item.title}</span>
               )}
               {isConfigMode && (
                 <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
@@ -176,16 +177,16 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                 {children.map(child => (
                   <li className={styles.navItem} key={child.id} style={{
                     padding: `${theme.paddingTopBottom} 0`,
-                    margin: '0 10px'
+                    margin: '0 0'
                   }}>
-                    <div className={styles.navItemContent}>
-                      <span className="nav-spacer" style={{ width: 16, display: 'inline-block' }}></span>
+                    <div className={styles.navItemContent} style={{ color: theme.textColor }}>
+                      <span className="nav-spacer" style={{ width: 5, display: 'inline-block' }}></span>
                       {child.url ? (
-                        <a href={child.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize }}>
-                          <span className={styles.navTitle}>{child.title}</span>
+                        <a href={child.url} className={styles.navLink} target="_self" style={{ fontSize: theme.fontSize, color: theme.textColor }}>
+                          <span className={styles.navTitle} style={{ color: theme.textColor }}>{child.title}</span>
                         </a>
                       ) : (
-                        <span className={styles.navTitle} style={{ fontSize: theme.fontSize }}>{child.title}</span>
+                        <span className={styles.navTitle} style={{ fontSize: theme.fontSize, color: theme.textColor }}>{child.title}</span>
                       )}
                       {isConfigMode && (
                         <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
