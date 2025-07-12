@@ -386,6 +386,38 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       >
         <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
+            {(currentTheme.logoUrl || currentTheme.siteName) && (
+              <a 
+                href={currentTheme.siteUrl || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={styles.siteLink}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  textDecoration: 'none',
+                  color: currentTheme.textColor
+                }}
+              >
+                {currentTheme.logoUrl && (
+                  <img 
+                    src={currentTheme.logoUrl} 
+                    alt="Site logo" 
+                    style={{ 
+                      width: currentTheme.logoSize || '40px',
+                      height: 'auto',
+                      maxHeight: '40px'
+                    }} 
+                  />
+                )}
+                {currentTheme.siteName && (
+                  <span className={styles.siteName} style={{ fontSize: currentTheme.fontSize }}>
+                    {currentTheme.siteName}
+                  </span>
+                )}
+              </a>
+            )}
           </div>
           <div className={styles.searchContainer}>
             <Icon iconName="Search" className={styles.searchIcon} />

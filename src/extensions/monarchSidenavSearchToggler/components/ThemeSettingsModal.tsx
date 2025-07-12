@@ -157,6 +157,76 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
                 </div>
               </div>
             )}
+
+            <div className={styles.colorSection}>
+              <h3>Logo & Site Settings</h3>
+            </div>
+
+            <div className={styles.colorSection}>
+              <label>Logo Upload</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={this.handleLogoUpload}
+                  style={{ flex: 1 }}
+                />
+                {formData.logoUrl && (
+                  <DefaultButton
+                    text="Delete"
+                    onClick={() => this.updateTheme('logoUrl', '')}
+                    styles={{ root: { minWidth: 'auto' } }}
+                  />
+                )}
+              </div>
+              {formData.logoUrl && (
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <img 
+                    src={formData.logoUrl} 
+                    alt="Logo preview" 
+                    style={{ 
+                      maxWidth: '100px', 
+                      maxHeight: '60px', 
+                      border: '1px solid #d2d0ce',
+                      borderRadius: '4px'
+                    }} 
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className={styles.colorSection}>
+              <label>Logo Size ({formData.logoSize})</label>
+              <Slider
+                min={30}
+                max={100}
+                step={5}
+                value={parseInt((formData.logoSize || '40px').replace('px', ''), 10)}
+                onChange={(value) => this.updateTheme('logoSize', `${value}px`)}
+                showValue={false}
+                styles={{ root: { marginTop: '8px' } }}
+              />
+            </div>
+
+            <div className={styles.colorSection}>
+              <label>Site Name</label>
+              <TextField
+                value={formData.siteName}
+                onChange={(e, newValue) => this.updateTheme('siteName', newValue || '')}
+                placeholder="Enter site name"
+                styles={{ root: { marginTop: '4px' } }}
+              />
+            </div>
+
+            <div className={styles.colorSection}>
+              <label>Site URL</label>
+              <TextField
+                value={formData.siteUrl}
+                onChange={(e, newValue) => this.updateTheme('siteUrl', newValue || '')}
+                placeholder="https://example.com"
+                styles={{ root: { marginTop: '4px' } }}
+              />
+            </div>
           </div>
         </div>
 
@@ -196,6 +266,18 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
     // Call onThemeChange for reactive updates without saving
     if (this.props.onThemeChange) {
       this.props.onThemeChange(updatedTheme);
+    }
+  };
+
+  private handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        this.updateTheme('logoUrl', result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 

@@ -24,7 +24,10 @@ export interface IThemeConfig {
   borderEnabled: boolean;
   borderColor: string;
   paddingTopBottom: string;
-  // Note: No logo configuration as per requirements
+  logoUrl: string;
+  logoSize: string;
+  siteName: string;
+  siteUrl: string;
 }
 
 export interface ISidebarConfig {
@@ -88,7 +91,11 @@ export const DefaultTheme: IThemeConfig = {
   sidebarWidth: '300px',
   borderEnabled: false,
   borderColor: '#d2d0ce',
-  paddingTopBottom: '2px'
+  paddingTopBottom: '2px',
+  logoUrl: '',
+  logoSize: '40px',
+  siteName: '',
+  siteUrl: ''
 };
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {
