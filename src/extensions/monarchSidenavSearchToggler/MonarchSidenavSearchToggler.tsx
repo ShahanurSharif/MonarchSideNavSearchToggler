@@ -227,6 +227,35 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
+  // Save configuration with specific open state (to avoid closure issues)
+  const saveConfigurationWithOpenState = async (openState: boolean): Promise<void> => {
+    try {
+      console.log('🔄 saveConfigurationWithOpenState called with open state:', openState);
+      const config = await configService.loadConfiguration();
+      config.items = nav;
+      
+      // Update sidebar configuration with the provided open state
+      config.sidebar = {
+        isOpen: openState, // Use the provided open state instead of state variable
+        isPinned,
+        position: 'left' // We only support left position for now
+      };
+      
+      // Update theme configuration
+      config.theme = currentTheme;
+      
+      console.log('🔄 Saving config with sidebar state:', config.sidebar);
+      const success = await configService.saveConfiguration(config);
+      if (success) {
+        console.log('✅ Configuration saved successfully with open state:', openState);
+      } else {
+        console.error('❌ Configuration save returned false');
+      }
+    } catch (error) {
+      console.error('❌ Failed to save configuration:', error);
+    }
+  };
+
   // Push effect for pinned sidebar with persistent styling
   React.useEffect((): (() => void) => {
     let mutationObserver: MutationObserver | null = null;
@@ -502,7 +531,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
             const newOpen = !open;
             console.log('🔄 Setting isOpen to:', newOpen);
             setTimeout(() => {
-              saveConfiguration().catch(error => {
+              saveConfigurationWithOpenState(newOpen).catch(error => {
                 console.error('Failed to save configuration:', error);
               });
             }, 100);

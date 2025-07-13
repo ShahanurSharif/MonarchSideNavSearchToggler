@@ -1,6 +1,6 @@
 {
   "name": "monarch-sidenav-search-toggler",
-  "version": "2.1.4",
+  "version": "2.1.6.0",
   "private": true,
   "engines": {
     "node": ">=22.14.0 < 23.0.0"
