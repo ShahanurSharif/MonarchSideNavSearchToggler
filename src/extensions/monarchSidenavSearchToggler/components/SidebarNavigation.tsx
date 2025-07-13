@@ -79,7 +79,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   };
 
   // Enhanced search logic that handles parent-child relationships
-  const getSearchResults = (): { rootItems: NavItem[], childItems: { [parentId: number]: NavItem[] } } => {
+  const getSearchResults = React.useMemo((): { rootItems: NavItem[], childItems: { [parentId: number]: NavItem[] } } => {
     if (!searchQuery.trim()) {
       // No search: return normal hierarchy
       const rootItems = getRootItems();
@@ -127,9 +127,9 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     });
 
     return { rootItems, childItems };
-  };
+  }, [searchQuery, items]);
 
-  const { rootItems, childItems } = getSearchResults();
+  const { rootItems, childItems } = getSearchResults;
 
   // Auto-expand parents that have matching children during search
   React.useEffect(() => {
@@ -140,7 +140,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       });
       setExpanded(newExpanded);
     }
-  }, [searchQuery, childItems]);
+  }, [searchQuery]);
 
   const handleToggle = (id: number): void => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -150,7 +150,6 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     <ul className={styles.navigationList} style={{
       backgroundColor: theme.backgroundColor,
       color: theme.textColor,
-      fontSize: theme.fontSize,
       fontFamily: theme.fontFamily
     }}>
       {rootItems.map(item => {

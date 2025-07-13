@@ -52,23 +52,30 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   // Create NavigationConfigService instance
   const configService = React.useMemo((): NavigationConfigService => new NavigationConfigService(context), [context]);
 
-  const loadConfiguration = async (): Promise<void> => {
+  // Update loadConfiguration to only set isLoading(false) after config is loaded or default is set
+  const loadConfiguration = async (retryCount = 0): Promise<void> => {
     try {
       setIsLoading(true);
+      console.log(`🔄 Loading configuration (attempt ${retryCount + 1})...`);
       
       const config = await configService.loadConfiguration();
       console.log('MonarchSideNavSearchToggler: Loaded config:', config);
       
       // Set navigation items
       setNav(config.items);
-      
       // Set sidebar configuration from config
       if (config.sidebar) {
-        setIsOpen(config.sidebar.isOpen);
-        setIsPinned(config.sidebar.isPinned);
-        console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', config.sidebar.isOpen, 'isPinned:', config.sidebar.isPinned);
+        const newIsOpen = config.sidebar.isOpen ?? true;
+        const newIsPinned = config.sidebar.isPinned ?? false;
+        setIsOpen(newIsOpen);
+        setIsPinned(newIsPinned);
+        console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', newIsOpen, 'isPinned:', newIsPinned);
+      } else {
+        // Set default values if no sidebar config
+        setIsOpen(true);
+        setIsPinned(false);
+        console.log('MonarchSideNavSearchToggler: Using default sidebar state - isOpen: true, isPinned: false');
       }
-      
       // Set theme configuration
       if (config.theme) {
         setCurrentTheme(config.theme);
@@ -81,60 +88,80 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
           }
         }
       }
-      
-      // Toggle position still comes from localStorage as it's user-specific
-      // Do NOT set toggleTop from config - it comes from localStorage via getTogglerPosition()
-      
+      console.log('✅ Configuration loaded successfully');
+      setIsLoading(false);
     } catch (error) {
       console.error('MonarchSideNavSearchToggler: Failed to load configuration:', error);
-      // Use default values if loading fails
-      setNav([
-        {
-          "id": 1,
-          "title": "Home",
-          "url": "/",
-          "target": "_self",
-          "order": 1,
-          "parentId": 0
-        },
-        {
-          "id": 2,
-          "title": "Documents",
-          "url": "/documents",
-          "target": "_self",
-          "order": 2,
-          "parentId": 0
-        },
-        {
-          "id": 5,
-          "title": "Policies",
-          "url": "/documents/policies",
-          "target": "_self",
-          "order": 1,
-          "parentId": 2
-        },
-        {
-          "id": 6,
-          "title": "Procedures",
-          "url": "/documents/procedures",
-          "target": "_self",
-          "order": 2,
-          "parentId": 2
-        }
-      ]);
-      setIsOpen(true);
-      setIsPinned(false);
-      setSidebarWidth(300);
-    } finally {
-      setIsLoading(false);
+      // Retry logic for hard reloads (up to 2 retries)
+      if (retryCount < 2) {
+        console.log(`🔄 Retrying configuration load in 1 second... (attempt ${retryCount + 2})`);
+        setTimeout(() => {
+          loadConfiguration(retryCount + 1).catch(retryError => {
+            console.error('MonarchSideNavSearchToggler: Retry failed:', retryError);
+            setDefaultConfiguration();
+          });
+        }, 1000);
+        return;
+      }
+      // Use default values if all retries fail
+      setDefaultConfiguration();
     }
   };
 
+  // Helper function to set default configuration
+  const setDefaultConfiguration = (): void => {
+    console.log('🔄 Setting default configuration...');
+    setNav([
+      {
+        "id": 1,
+        "title": "Home",
+        "url": "/",
+        "target": "_self",
+        "order": 1,
+        "parentId": 0
+      },
+      {
+        "id": 2,
+        "title": "Documents",
+        "url": "/documents",
+        "target": "_self",
+        "order": 2,
+        "parentId": 0
+      },
+      {
+        "id": 5,
+        "title": "Policies",
+        "url": "/documents/policies",
+        "target": "_self",
+        "order": 1,
+        "parentId": 2
+      },
+      {
+        "id": 6,
+        "title": "Procedures",
+        "url": "/documents/procedures",
+        "target": "_self",
+        "order": 2,
+        "parentId": 2
+      }
+    ]);
+    setIsOpen(true);
+    setIsPinned(false);
+    setSidebarWidth(300);
+    setIsLoading(false);
+    console.log('✅ Default configuration set');
+  };
+
   // Load configuration on component mount
-  React.useEffect((): void => {
-    loadConfiguration().catch(error => {
-      console.error('Failed to load configuration:', error);
-    });
+  React.useEffect((): (() => void) => {
+    // Small delay to ensure SharePoint is fully loaded
+    const timeoutId = setTimeout(() => {
+      loadConfiguration().catch(error => {
+        console.error('Failed to load configuration:', error);
+      });
+    }, 500);
+    
+    return (): void => clearTimeout(timeoutId);
   }, []);
 
   const saveConfiguration = async (): Promise<void> => {
@@ -165,26 +192,128 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Push effect for pinned sidebar
-  React.useEffect((): (() => void) => {
-    const spPageChrome = document.getElementById('SPPageChrome');
-    if (spPageChrome) {
-      if (isOpen && isPinned) {
-        spPageChrome.style.marginLeft = `${sidebarWidth}px`;
-        spPageChrome.style.width = `calc(100% - ${sidebarWidth}px)`;
-        spPageChrome.style.transition = 'margin-left 0.3s, width 0.3s';
+  // Save configuration with specific pin state (to avoid closure issues)
+  const saveConfigurationWithPinState = async (pinState: boolean): Promise<void> => {
+    try {
+      console.log('🔄 saveConfigurationWithPinState called with pin state:', pinState);
+      const config = await configService.loadConfiguration();
+      config.items = nav;
+      
+      // Update sidebar configuration with the provided pin state
+      config.sidebar = {
+        isOpen,
+        isPinned: pinState, // Use the provided pin state instead of state variable
+        position: 'left' // We only support left position for now
+      };
+      
+      // Update theme configuration
+      config.theme = currentTheme;
+      
+      console.log('🔄 Saving config with sidebar state:', config.sidebar);
+      const success = await configService.saveConfiguration(config);
+      if (success) {
+        console.log('✅ Configuration saved successfully with pin state:', pinState);
       } else {
-        spPageChrome.style.marginLeft = '0px';
-        spPageChrome.style.width = '100%';
-        spPageChrome.style.transition = 'margin-left 0.3s, width 0.3s';
+        console.error('❌ Configuration save returned false');
       }
+    } catch (error) {
+      console.error('❌ Failed to save configuration:', error);
     }
-    return (): void => {
-      if (spPageChrome) {
-        spPageChrome.style.marginLeft = '';
-        spPageChrome.style.width = '';
-        spPageChrome.style.transition = '';
+  };
+
+  // Push effect for pinned sidebar with persistent styling
+  React.useEffect((): (() => void) => {
+    let mutationObserver: MutationObserver | null = null;
+    let styleElement: HTMLStyleElement | null = null;
+    
+    const applyPersistentStyles = (): void => {
+      const spPageChrome = document.getElementById('SPPageChrome');
+      if (!spPageChrome) {
+        console.warn('⚠️ SPPageChrome element not found');
+        return;
       }
+
+      console.log('🔄 Applying sidebar state:', { isOpen, isPinned, sidebarWidth });
+      
+      // Remove existing style element
+      if (styleElement) {
+        styleElement.remove();
+      }
+      
+      // Create new style element with !important rules
+      styleElement = document.createElement('style');
+      styleElement.id = 'monarch-sidebar-styles';
+      
+      if (isOpen && isPinned) {
+        styleElement.textContent = `
+          #SPPageChrome {
+            margin-left: ${sidebarWidth}px !important;
+            width: calc(100% - ${sidebarWidth}px) !important;
+            transition: margin-left 0.3s, width 0.3s !important;
+          }
+        `;
+        console.log('✅ Sidebar pinned - content adjusted with persistent styles');
+      } else {
+        styleElement.textContent = `
+          #SPPageChrome {
+            margin-left: 0px !important;
+            width: 100% !important;
+            transition: margin-left 0.3s, width 0.3s !important;
+          }
+        `;
+        console.log('✅ Sidebar unpinned - content reset with persistent styles');
+      }
+      
+      document.head.appendChild(styleElement);
+    };
+    
+    // Apply styles immediately
+    const timeoutId = setTimeout(applyPersistentStyles, 50);
+    
+    // Set up MutationObserver to watch for SharePoint style changes
+    const targetNode = document.getElementById('SPPageChrome');
+    if (targetNode) {
+      mutationObserver = new MutationObserver((mutations) => {
+        let shouldReapply = false;
+        
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            // Check if SharePoint changed our styles
+            const currentStyle = (mutation.target as HTMLElement).style;
+            if (isOpen && isPinned) {
+              if (currentStyle.marginLeft !== `${sidebarWidth}px` || 
+                  currentStyle.width !== `calc(100% - ${sidebarWidth}px)`) {
+                shouldReapply = true;
+              }
+            } else {
+              if (currentStyle.marginLeft !== '0px' || currentStyle.width !== '100%') {
+                shouldReapply = true;
+              }
+            }
+          }
+        });
+        
+        if (shouldReapply) {
+          console.log('🔄 SharePoint modified styles, reapplying...');
+          setTimeout(applyPersistentStyles, 10);
+        }
+      });
+      
+      mutationObserver.observe(targetNode, {
+        attributes: true,
+        attributeFilter: ['style']
+      });
+    }
+    
+    return (): void => {
+      clearTimeout(timeoutId);
+      if (mutationObserver) {
+        mutationObserver.disconnect();
+      }
+      if (styleElement) {
+        styleElement.remove();
+      }
+      console.log('🧹 Cleanup: SPPageChrome styles and observers removed');
     };
   }, [isOpen, isPinned, sidebarWidth]);
 
@@ -325,28 +454,33 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     setCurrentTheme(DefaultTheme);
   };
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        background: 'rgba(255, 255, 255, 0.8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000
+  // Show loading state inside sidebar
+  const renderLoadingContent = (): JSX.Element => (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      padding: '40px 20px',
+      color: currentTheme.textColor
+    }}>
+      <Icon iconName="Sync" style={{ 
+        fontSize: '32px', 
+        animation: 'spin 1s linear infinite',
+        color: currentTheme.textColor,
+        marginBottom: '16px'
+      }} />
+      <div style={{ 
+        fontSize: '14px', 
+        color: currentTheme.textColor,
+        textAlign: 'center',
+        lineHeight: '1.4'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <Icon iconName="Sync" style={{ fontSize: '24px', animation: 'spin 1s linear infinite' }} />
-          <div style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>Loading navigation...</div>
-        </div>
+        Loading navigation...
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <>
@@ -412,7 +546,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                   />
                 )}
                 {currentTheme.siteName && (
-                  <span className={styles.siteName} style={{ fontSize: currentTheme.fontSize }}>
+                  <span className={styles.siteName}>
                     {currentTheme.siteName}
                   </span>
                 )}
@@ -430,16 +564,20 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
             />
           </div>
           <div className={styles.navigationContent}>
-            <SidebarNavigation
-              items={nav}
-              isConfigMode={isConfig}
-              searchQuery={search}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onAddChild={handleAddChild}
-              onAddRoot={handleAddRoot}
-              theme={currentTheme}
-            />
+            {isLoading ? (
+              renderLoadingContent()
+            ) : (
+              <SidebarNavigation
+                items={nav}
+                isConfigMode={isConfig}
+                searchQuery={search}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onAddChild={handleAddChild}
+                onAddRoot={handleAddRoot}
+                theme={currentTheme}
+              />
+            )}
           </div>
           <div className={styles.sidebarFooter}>
             <h2 className={styles.sidebarTitle}>Navigation</h2>
@@ -448,17 +586,18 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                 className={styles.headerButton}
                 aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
                 title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                onClick={() => {
-                  setIsPinned(pin => {
-                    const newPinned = !pin;
-                    // Auto-save pin state
-                    setTimeout(() => {
-                      saveConfiguration().catch(error => {
-                        console.error('Failed to save configuration:', error);
-                      });
-                    }, 100);
-                    return newPinned;
-                  });
+                onClick={async () => {
+                  const newPinned = !isPinned;
+                  setIsPinned(newPinned);
+                  // Save configuration immediately with the new pin state
+                  try {
+                    await saveConfigurationWithPinState(newPinned);
+                    console.log('✅ Pin state saved successfully:', newPinned);
+                  } catch (error) {
+                    console.error('❌ Failed to save pin state:', error);
+                    // Revert state if save failed
+                    setIsPinned(!newPinned);
+                  }
                 }}
                 style={{ marginRight: 8 }}
               >
