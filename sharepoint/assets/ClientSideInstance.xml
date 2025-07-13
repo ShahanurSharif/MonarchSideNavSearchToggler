@@ -4,6 +4,6 @@
         Title="MonarchSidenavSearchToggler"
         Location="ClientSideExtension.ApplicationCustomizer"
         ComponentId="66f08679-1409-4558-a68f-be28642739c7"
-        Properties="{&quot;description&quot;:&quot;Monarch Sidebar Navigation&quot;}">
+        Properties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
     </ClientSideComponentInstance>
 </Elements>

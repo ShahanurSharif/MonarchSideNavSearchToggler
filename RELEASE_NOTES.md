@@ -1,129 +1,144 @@
-# Monarch Side Navigation Search Toggler - Release Notes
+# Release Notes - MonarchSideNavSearchToggler
 
-## Version 1.0.0 - Major Release
-**Release Date**: December 2024
+## Version 2.1.3 (Latest) - 2024-12-19
 
-### Major Features
+### 🚀 Major Fixes
+- **Fixed Toggle Button Visibility**: Resolved critical issue where toggle button was not showing in production
+- **Fixed Property Configuration**: Corrected XML files to use proper `description` property instead of `testMessage`
+- **Enhanced Toggle Button Styling**: Improved visibility with higher z-index (9999) and better background opacity
+- **Removed Border**: Removed border from toggle button per client request for cleaner appearance
 
-#### Push Sidebar Navigation
-- **Sliding Animation**: Sidebar slides in from left with smooth transitions
-- **Content Adjustment**: SharePoint content dynamically adjusts to 80% width (desktop), 70% (tablet), 60% (mobile)
-- **SPPageChrome Integration**: Specifically targets SharePoint's main container for reliable content manipulation
-- **Responsive Design**: Automatically adapts to different screen sizes
+### 🔧 Technical Improvements
+- **Added Comprehensive Debug Logging**: Enhanced troubleshooting capabilities with detailed console logs
+- **Fixed Function Order**: Resolved linter warnings by reordering function definitions
+- **Added Version Sync Script**: Created `sync-version.js` for automated version management across all files
+- **Improved Error Handling**: Better retry logic and error recovery for configuration loading
 
-#### FluentUI Integration
-- **Professional Button**: 47px × 47px FluentUI DefaultButton with white background
-- **Dynamic Icons**: 
-  - Search icon when sidebar is closed
-  - Pin icon when sidebar is open
-- **Microsoft Design System**: Full compliance with SharePoint's design language
+### 📦 Deployment
+- **Production Build**: Successfully built and packaged for production deployment
+- **Package Size**: 231KB optimized package
+- **Version Sync**: All version numbers synchronized to 2.1.3 across package.json, manifest, and solution files
 
-#### Browser Cache with Expiry
-- **365-Day Persistence**: User preferences stored for 1 year
-- **Automatic Loading**: Cached state applied on page load
-- **Smart Expiry**: Automatic cleanup of expired cache
-- **Error Handling**: Graceful fallback to default state on cache errors
+### 🐛 Bug Fixes
+- Fixed infinite loop in search functionality
+- Resolved pin/unpin sidebar state persistence issues
+- Fixed SharePoint style override conflicts
+- Improved sidebar loading experience with retry logic
+- Fixed UI/UX issues with header padding and theme font size application
 
-#### Enhanced Sidebar Header
-- **Settings Button**: Gear icon for future settings functionality
-- **Close Button**: Close icon for easy sidebar dismissal
-- **Professional Styling**: Gray backgrounds with hover effects
-- **Reliable Icons**: Unicode symbols ensure visibility across all environments
+---
 
-### User Interface Improvements
+## Version 2.1.2 - 2024-12-19
 
-#### Professional Styling
-- **SharePoint Integration**: Matches Microsoft's Fluent Design principles
-- **Segoe UI Typography**: Consistent with SharePoint's font system
-- **Professional Color Scheme**: Microsoft-compliant color palette
-- **Smooth Animations**: 0.3s transitions for polished user experience
+### 🎨 UI/UX Improvements
+- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
+- **Theme Font Size**: Restricted theme font size application to navigation list items only
+- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
 
-#### Knowledge Base Layout
-- **Hierarchical Navigation**: 
-  - Home
-  - IT Support (Printer Connection, Password Reset, VPN Access, MFA Setup)
-  - Human Resources (Expense Reimbursement, Time Off Requests)
-- **Search Functionality**: Input field for article searching
-- **Category Organization**: Professional knowledge base structure
+### 🔧 Technical Enhancements
+- **Loading Experience**: Moved loading indicator inside sidebar for better UX
+- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
+- **State Management**: Fixed React state closure issues by passing explicit pin state during save
 
-### Technical Enhancements
+### 🐛 Bug Fixes
+- Fixed infinite loop in search functionality by memoizing search results
+- Resolved pin/unpin sidebar behavior with proper state persistence
+- Fixed SharePoint overriding custom styles with enhanced CSS injection
+- Resolved linter warnings related to function order and missing return types
 
-#### Component Architecture
-- **Class-based React**: Proper lifecycle management
-- **TypeScript Compliance**: Full type safety with interface definitions
-- **CSS Modules**: Scoped styling with SASS support
-- **Event Management**: Proper cleanup on component unmount
+---
 
-#### Performance Optimizations
-- **Dynamic Imports**: Webpack chunking for ReactDOM
-- **DOM Manipulation**: Efficient element injection and cleanup
-- **Memory Management**: Proper event listener cleanup
-- **Cache Management**: Optimized localStorage usage
+## Version 2.1.1 - 2024-12-19
 
-#### Error Handling & Debugging
-- **Console Logging**: Detailed debug information with "MonarchSideNav" prefix
-- **Graceful Failures**: Fallback behavior for missing elements
-- **Retry Logic**: Automatic retries for SharePoint element detection
-- **Cache Validation**: Robust cache loading with error recovery
+### 🎨 UI/UX Improvements
+- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
+- **Theme Font Size**: Restricted theme font size application to navigation list items only
+- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
 
-### Development Experience
+### 🔧 Technical Enhancements
+- **Loading Experience**: Moved loading indicator inside sidebar for better UX
+- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
+- **State Management**: Fixed React state closure issues by passing explicit pin state during save
 
-#### Build System
-- **SharePoint Framework 1.21.1**: Latest SPFx version
-- **React 17.0.1**: Stable React integration
-- **TypeScript 5.3.3**: Modern TypeScript features
-- **FluentUI 8.123.0**: Latest Microsoft design components
+### 🐛 Bug Fixes
+- Fixed infinite loop in search functionality by memoizing search results
+- Resolved pin/unpin sidebar behavior with proper state persistence
+- Fixed SharePoint overriding custom styles with enhanced CSS injection
+- Resolved linter warnings related to function order and missing return types
 
-#### Code Quality
-- **ESLint Integration**: Microsoft SPFx linting rules
-- **SASS Compilation**: Professional styling pipeline
-- **Type Safety**: Comprehensive TypeScript coverage
-- **Documentation**: Extensive JSDoc comments
+---
 
-### Responsive Design
+## Version 2.1.0 - 2024-12-19
 
-#### Screen Size Adaptations
-- **Desktop (>768px)**: 20% sidebar, 80% content
-- **Tablet (≤768px)**: 30% sidebar, 70% content
-- **Mobile (≤480px)**: 40% sidebar, 60% content
+### 🎨 UI/UX Improvements
+- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
+- **Theme Font Size**: Restricted theme font size application to navigation list items only
+- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
 
-#### Button Positioning
-- **Adaptive Positioning**: Button moves with sidebar for consistency
-- **Z-index Management**: Proper layering above SharePoint elements
+### 🔧 Technical Enhancements
+- **Loading Experience**: Moved loading indicator inside sidebar for better UX
+- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
+- **State Management**: Fixed React state closure issues by passing explicit pin state during save
+
+### 🐛 Bug Fixes
+- Fixed infinite loop in search functionality by memoizing search results
+- Resolved pin/unpin sidebar behavior with proper state persistence
+- Fixed SharePoint overriding custom styles with enhanced CSS injection
+- Resolved linter warnings related to function order and missing return types
+
+---
+
+## Version 2.0.0 - 2024-12-19
+
+### 🚀 Major Features
+- **Hierarchical Navigation**: Full support for parent-child navigation structure
+- **Search Functionality**: Real-time search with highlighting and filtering
+- **Theme Customization**: Comprehensive theme system with color, font, and layout options
+- **Pin/Unpin Sidebar**: Persistent sidebar state with content adjustment
+- **Configuration Management**: JSON-based configuration with SharePoint integration
+
+### 🎨 UI Components
+- **Sidebar Navigation**: Collapsible hierarchical navigation with icons
+- **Search Interface**: Real-time search with clear functionality
+- **Theme Settings Modal**: Comprehensive theme customization interface
+- **Navigation Config Modal**: Add, edit, and delete navigation items
+- **Toggle Button**: Draggable toggle button for sidebar control
+
+### 🔧 Technical Features
+- **SharePoint Integration**: Full SPFx application customizer implementation
+- **Configuration Service**: SharePoint list-based configuration storage
+- **Responsive Design**: Mobile-friendly responsive layout
 - **Accessibility**: ARIA labels and keyboard navigation support
-
-### Browser Compatibility
-
-#### Storage Management
-- **localStorage**: Persistent cache across browser sessions
-- **Expiry Management**: Automatic cleanup of old data
-- **Error Recovery**: Graceful handling of storage failures
-- **Cross-tab Sync**: Consistent state across browser tabs
-
-### Deployment Ready
-
-#### Production Build
-- **Optimized Bundle**: Minified and compressed for production
-- **SharePoint Deployment**: Ready for SharePoint app catalog
-- **Manifest Configuration**: Proper SPFx extension configuration
-- **Asset Management**: All static assets properly bundled
+- **Error Handling**: Comprehensive error handling and retry logic
 
 ---
 
-## Key Benefits
+## Version 1.0.0 - 2024-12-19
 
-1. **Enhanced User Experience**: Smooth sliding navigation with professional animations
-2. **Persistent Preferences**: User choices remembered for 1 year
-3. **SharePoint Integration**: Native look and feel within SharePoint sites
-4. **Mobile Responsive**: Works seamlessly across all device sizes
-5. **Developer Friendly**: Well-documented, maintainable codebase
-
-## Getting Started
-
-1. Deploy to SharePoint app catalog
-2. Add to site collection
-3. Enjoy persistent, professional sidebar navigation!
+### 🎉 Initial Release
+- **Basic Sidebar Navigation**: Simple navigation structure
+- **Toggle Functionality**: Basic sidebar show/hide functionality
+- **SharePoint Integration**: SPFx application customizer foundation
+- **Configuration System**: Basic configuration management
 
 ---
 
-**Built with care for SharePoint environments** 
+## Installation Instructions
+
+1. **Upload Package**: Upload `monarch-sidenav.sppkg` to SharePoint App Catalog
+2. **Deploy Solution**: Deploy the solution to your SharePoint environment
+3. **Activate Features**: Activate the application customizer feature
+4. **Configure Navigation**: Use the configuration interface to set up navigation items
+5. **Customize Theme**: Apply theme settings as needed
+
+## Configuration
+
+The extension uses a JSON configuration file stored in SharePoint that includes:
+- Navigation items with hierarchical structure
+- Theme settings (colors, fonts, layout)
+- Sidebar state (open/closed, pinned/unpinned)
+- Toggle button position
+
+## Support
+
+For issues or questions, please check the console logs for debugging information and refer to the documentation in the `/docs` folder. 

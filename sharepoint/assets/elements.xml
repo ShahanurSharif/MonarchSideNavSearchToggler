@@ -4,7 +4,7 @@
         Title="MonarchSidenavSearchToggler"
         Location="ClientSideExtension.ApplicationCustomizer"
         ClientSideComponentId="66f08679-1409-4558-a68f-be28642739c7"
-        ClientSideComponentProperties="{&quot;description&quot;:&quot;Monarch Sidebar Navigation&quot;}">
+        ClientSideComponentProperties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
     </CustomAction>
     <Module Name="MonarchSidenavSearchTogglerAssets" Url="SiteAssets" Path="" RootWebOnly="true">
         <File Path="monarchSidebarNavConfig.json" Url="monarchSidebarNavConfig.json" Type="GhostableInLibrary">
