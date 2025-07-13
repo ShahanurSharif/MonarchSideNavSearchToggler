@@ -183,7 +183,13 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
               )}
               {/* Only the title is inside the link */}
               {item.url ? (
-                <a href={item.url} className={styles.navLink} target={item.target || '_self'} style={{ fontSize: theme.fontSize, color: theme.textColor }}>
+                <a 
+                  href={item.url} 
+                  className={styles.navLink} 
+                  target={item.target || '_self'} 
+                  rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
+                  style={{ fontSize: theme.fontSize, color: theme.textColor }}
+                >
                   <span className={styles.navTitle} style={{ color: theme.textColor }}>{item.title}</span>
                 </a>
               ) : (
@@ -215,7 +221,13 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       <div className={`${styles.navItemContent} ${isChildActive ? styles.navItemContentActive : ''}`} style={{ color: theme.textColor }}>
                       <span className="nav-spacer" style={{ width: 5, display: 'inline-block' }}></span>
                       {child.url ? (
-                        <a href={child.url} className={styles.navLink} target={child.target || '_self'} style={{ fontSize: theme.fontSize, color: theme.textColor }}>
+                        <a 
+                          href={child.url} 
+                          className={styles.navLink} 
+                          target={child.target || '_self'} 
+                          rel={child.target === '_blank' ? 'noopener noreferrer' : undefined}
+                          style={{ fontSize: theme.fontSize, color: theme.textColor }}
+                        >
                           <span className={styles.navTitle} style={{ color: theme.textColor }}>{child.title}</span>
                         </a>
                       ) : (
