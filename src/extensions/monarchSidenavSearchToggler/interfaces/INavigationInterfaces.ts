@@ -99,7 +99,7 @@ export const DefaultTheme: IThemeConfig = {
 };
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {
-  version: '2.1.6.0',
+  version: '2.1.7.0',
   items: [
     {
       id: 1,

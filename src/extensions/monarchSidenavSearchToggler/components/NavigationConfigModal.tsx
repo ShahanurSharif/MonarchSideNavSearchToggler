@@ -13,7 +13,6 @@ export interface NavItem {
   target?: '_blank' | '_self';
   order: number;
   parentId: number; // 0 for root items, number for child items
-  openIn?: string;
 }
 
 export interface INavigationConfigModalProps {
@@ -74,10 +73,10 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
     const { formData, errors, isValid } = this.state;
     const title = mode === 'add' && parentTitle ? `Add Child to ${parentTitle}` : (mode === 'add' ? 'Add Navigation' : 'Edit Navigation');
     const openInOptions = [
-      { key: 'same', text: 'Same tab (default)' },
-      { key: 'new', text: 'New tab' }
+      { key: '_self', text: 'Same tab (default)' },
+      { key: '_blank', text: 'New tab' }
     ];
-    const openIn = this.state.formData.openIn || 'same';
+    const target = this.state.formData.target || '_self';
 
     return (
       <Modal
@@ -112,9 +111,9 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
             <div style={{ marginTop: 12 }}>
               <label style={{ fontWeight: 500, marginBottom: 4, display: 'block' }}>Open in:</label>
               <select
-                value={openIn}
+                value={target}
                 onChange={e => this.setState(prev => ({
-                  formData: { ...prev.formData, openIn: e.target.value }
+                  formData: { ...prev.formData, target: e.target.value as '_blank' | '_self' }
                 }), this.validateForm)}
                 style={{ width: '100%', padding: 6, borderRadius: 2, border: '1px solid #d2d0ce' }}
               >
@@ -149,7 +148,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
         url: this.props.item.url,
         order: this.props.item.order,
         parentId: this.props.item.parentId,
-        openIn: this.props.item.target === '_blank' ? 'new' : 'same'
+        target: this.props.item.target || '_self'
       };
     }
     
@@ -159,7 +158,7 @@ export class NavigationConfigModal extends React.Component<INavigationConfigModa
       url: '',
       order: 1,
       parentId: this.props.parentId || 0,
-      openIn: 'same'
+      target: '_self'
     };
   }
 

@@ -3,7 +3,7 @@
   "solution": {
     "name": "monarch-sidenav",
     "id": "020453a9-06f3-4b81-8718-fc18dbeb8d15",
-    "version": "2.1.6.0",
+    "version": "2.1.7.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "Application Extension - Deployment of custom action",
         "description": "Deploys a custom action with ClientSideComponentId association",
         "id": "7c6fcaa5-a1d1-4188-aed3-eb7da877579b",
-        "version": "2.1.6.0",
+        "version": "2.1.7.0",
         "assets": {
           "elementManifests": [
             "elements.xml",

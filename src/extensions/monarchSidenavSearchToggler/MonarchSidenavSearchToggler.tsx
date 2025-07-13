@@ -14,7 +14,7 @@ import { DefaultTheme, IThemeConfig } from './interfaces/INavigationInterfaces';
 export interface NavItem {
   id: number;
   title: string;
-  target?: '_blank' | '_self'; // Optional target for links
+  target?: '_blank' | '_self';
   url: string;
   order: number;
   parentId: number; // 0 for root items, number for child items
@@ -439,6 +439,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const handleModalSave = (item: NavItem, parentId?: number): void => {
     if (!item.order) item.order = 1;
     if (!item.url) item.url = '';
+    
     setNav(prevNav => {
       let updatedNav: NavItem[];
       if (modalState.mode === 'edit' && item.id) {
