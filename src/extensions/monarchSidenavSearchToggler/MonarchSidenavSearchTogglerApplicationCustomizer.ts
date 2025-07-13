@@ -29,6 +29,7 @@ export default class MonarchSideNavSearchTogglerApplicationCustomizer
 
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
+    console.log('🚀 MonarchSideNavSearchToggler: Application Customizer initialized');
 
     // Create a container div for the React component
     const customNavId = 'monarch-sidebar-navigation-root';
@@ -37,8 +38,12 @@ export default class MonarchSideNavSearchTogglerApplicationCustomizer
       container = document.createElement('div');
       container.id = customNavId;
       document.body.appendChild(container);
+      console.log('✅ MonarchSideNavSearchToggler: Created container element');
+    } else {
+      console.log('✅ MonarchSideNavSearchToggler: Found existing container element');
     }
 
+    console.log('🔄 MonarchSideNavSearchToggler: Rendering React component...');
     ReactDOM.render(
       React.createElement(MonarchSidenavSearchToggler, { 
         description: this.properties.description || 'Monarch Sidebar Navigation',
@@ -46,6 +51,7 @@ export default class MonarchSideNavSearchTogglerApplicationCustomizer
       }),
       container
     );
+    console.log('✅ MonarchSideNavSearchToggler: React component rendered');
 
     return Promise.resolve();
   }

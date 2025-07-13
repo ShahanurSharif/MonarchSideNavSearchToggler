@@ -26,13 +26,17 @@ interface MonarchSidenavSearchTogglerProps {
 }
 
 export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavSearchTogglerProps): React.ReactElement<MonarchSidenavSearchTogglerProps> {
+  console.log('🚀 MonarchSidenavSearchToggler: Component initializing...');
+  
   const [nav, setNav] = React.useState<NavItem[]>([]);
   const [search, setSearch] = React.useState('');
   const [isConfig, setIsConfig] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(true);
   const [toggleTop, setToggleTop] = React.useState<number>(() => {
     const configService = new NavigationConfigService(context);
-    return parseInt(configService.getTogglerPosition() || '100', 10);
+    const position = parseInt(configService.getTogglerPosition() || '100', 10);
+    console.log('🔄 MonarchSidenavSearchToggler: Initial toggle position:', position);
+    return position;
   });
   const [modalState, setModalState] = React.useState<{
     isVisible: boolean;
@@ -47,10 +51,56 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const [isPinned, setIsPinned] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  console.log('🚀 MonarchSidenavSearchToggler: Initial state - isOpen:', isOpen, 'isLoading:', isLoading, 'toggleTop:', toggleTop);
+
   const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
 
   // Create NavigationConfigService instance
   const configService = React.useMemo((): NavigationConfigService => new NavigationConfigService(context), [context]);
+
+  // Helper function to set default configuration
+  const setDefaultConfiguration = (): void => {
+    console.log('🔄 Setting default configuration...');
+    setNav([
+      {
+        "id": 1,
+        "title": "Home",
+        "url": "/",
+        "target": "_self",
+        "order": 1,
+        "parentId": 0
+      },
+      {
+        "id": 2,
+        "title": "Documents",
+        "url": "/documents",
+        "target": "_self",
+        "order": 2,
+        "parentId": 0
+      },
+      {
+        "id": 5,
+        "title": "Policies",
+        "url": "/documents/policies",
+        "target": "_self",
+        "order": 1,
+        "parentId": 2
+      },
+      {
+        "id": 6,
+        "title": "Procedures",
+        "url": "/documents/procedures",
+        "target": "_self",
+        "order": 2,
+        "parentId": 2
+      }
+    ]);
+    setIsOpen(true);
+    setIsPinned(false);
+    setSidebarWidth(300);
+    setIsLoading(false);
+    console.log('✅ Default configuration set');
+  };
 
   // Update loadConfiguration to only set isLoading(false) after config is loaded or default is set
   const loadConfiguration = async (retryCount = 0): Promise<void> => {
@@ -106,50 +156,6 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       // Use default values if all retries fail
       setDefaultConfiguration();
     }
-  };
-
-  // Helper function to set default configuration
-  const setDefaultConfiguration = (): void => {
-    console.log('🔄 Setting default configuration...');
-    setNav([
-      {
-        "id": 1,
-        "title": "Home",
-        "url": "/",
-        "target": "_self",
-        "order": 1,
-        "parentId": 0
-      },
-      {
-        "id": 2,
-        "title": "Documents",
-        "url": "/documents",
-        "target": "_self",
-        "order": 2,
-        "parentId": 0
-      },
-      {
-        "id": 5,
-        "title": "Policies",
-        "url": "/documents/policies",
-        "target": "_self",
-        "order": 1,
-        "parentId": 2
-      },
-      {
-        "id": 6,
-        "title": "Procedures",
-        "url": "/documents/procedures",
-        "target": "_self",
-        "order": 2,
-        "parentId": 2
-      }
-    ]);
-    setIsOpen(true);
-    setIsPinned(false);
-    setSidebarWidth(300);
-    setIsLoading(false);
-    console.log('✅ Default configuration set');
   };
 
   // Load configuration on component mount
@@ -482,14 +488,19 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     </div>
   );
 
+  console.log('🔄 MonarchSidenavSearchToggler: Rendering component - isOpen:', isOpen, 'isLoading:', isLoading, 'toggleTop:', toggleTop);
+  
   return (
     <>
+      {/* Always render the toggle button, even during loading */}
       <SidebarToggleButton
         isOpen={isOpen}
         top={toggleTop}
         onToggle={() => {
+          console.log('🔄 Toggle button clicked, current isOpen:', isOpen);
           setIsOpen(open => {
             const newOpen = !open;
+            console.log('🔄 Setting isOpen to:', newOpen);
             setTimeout(() => {
               saveConfiguration().catch(error => {
                 console.error('Failed to save configuration:', error);
