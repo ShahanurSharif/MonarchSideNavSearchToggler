@@ -432,7 +432,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       } else {
         console.error('❌ Configuration save returned false');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to save configuration:', error);
     }
   };

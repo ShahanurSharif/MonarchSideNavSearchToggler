@@ -283,7 +283,7 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
     }
   };
 
-  private handleSidebarPositionChange = (position: 'left' | 'right') => {
+  private handleSidebarPositionChange = (position: 'left' | 'right'): void => {
     this.setState({ sidebarPosition: position, hasChanges: true });
     if (this.props.onThemeChange) {
       this.props.onThemeChange(this.state.formData, position);
