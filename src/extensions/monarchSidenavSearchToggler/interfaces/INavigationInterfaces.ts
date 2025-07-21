@@ -28,6 +28,7 @@ export interface IThemeConfig {
   logoSize: string;
   siteName: string;
   siteUrl: string;
+  position?: 'left' | 'right'; // NEW: sidebar position
 }
 
 export interface ISidebarConfig {
@@ -95,7 +96,8 @@ export const DefaultTheme: IThemeConfig = {
   logoUrl: '',
   logoSize: '40px',
   siteName: '',
-  siteUrl: ''
+  siteUrl: '',
+  position: 'left' // NEW: default position
 };
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {
@@ -178,7 +180,7 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
   sidebar: {
     isOpen: true,
     isPinned: false,
-    position: 'left'
+    position: DefaultTheme.position || 'left' // NEW: use theme position
   },
   searchEnabled: true,
   autoSave: true,

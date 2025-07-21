@@ -4,6 +4,7 @@ import { DefaultButton, PrimaryButton } from '@fluentui/react/lib/Button';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Slider } from '@fluentui/react/lib/Slider';
+import { Dropdown } from '@fluentui/react/lib/Dropdown';
 import { IThemeConfig } from '../interfaces/INavigationInterfaces';
 import styles from '../MonarchSidenavSearchToggler.module.scss';
 
@@ -157,6 +158,19 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
                 </div>
               </div>
             )}
+
+            <div className={styles.colorSection}>
+              <label>Sidebar Position</label>
+              <Dropdown
+                options={[
+                  { key: 'left', text: 'Left' },
+                  { key: 'right', text: 'Right' }
+                ]}
+                selectedKey={formData.position || 'left'}
+                onChange={(_, option) => this.updateTheme('position', option?.key as 'left' | 'right')}
+                styles={{ root: { width: 180, marginTop: 4 } }}
+              />
+            </div>
 
             <div className={styles.colorSection}>
               <h3>Logo & Site Settings</h3>

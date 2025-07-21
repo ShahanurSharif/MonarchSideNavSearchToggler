@@ -50,10 +50,9 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isPinned, setIsPinned] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [sidebarPosition, setSidebarPosition] = React.useState<'left' | 'right'>(DefaultTheme.position || 'left');
 
   console.log('🚀 MonarchSidenavSearchToggler: Initial state - isOpen:', isOpen, 'isLoading:', isLoading, 'toggleTop:', toggleTop);
-
-  const sidebarHiddenLeft = -1 * (sidebarWidth + 20);
 
   // Create NavigationConfigService instance
   const configService = React.useMemo((): NavigationConfigService => new NavigationConfigService(context), [context]);
@@ -119,16 +118,19 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
         const newIsPinned = config.sidebar.isPinned ?? false;
         setIsOpen(newIsOpen);
         setIsPinned(newIsPinned);
-        console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', newIsOpen, 'isPinned:', newIsPinned);
+        setSidebarPosition(config.sidebar.position || 'left');
+        console.log('MonarchSideNavSearchToggler: Set sidebar state - isOpen:', newIsOpen, 'isPinned:', newIsPinned, 'position:', config.sidebar.position);
       } else {
         // Set default values if no sidebar config
         setIsOpen(true);
         setIsPinned(false);
-        console.log('MonarchSideNavSearchToggler: Using default sidebar state - isOpen: true, isPinned: false');
+        setSidebarPosition(DefaultTheme.position || 'left');
+        console.log('MonarchSideNavSearchToggler: Using default sidebar state - isOpen: true, isPinned: false, position: left');
       }
       // Set theme configuration
       if (config.theme) {
         setCurrentTheme(config.theme);
+        if (config.theme.position) setSidebarPosition(config.theme.position);
         // Set sidebar width from theme
         if (config.theme.sidebarWidth) {
           const width = parseInt(config.theme.sidebarWidth.replace('px', ''), 10);
@@ -158,34 +160,18 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Load configuration on component mount
-  React.useEffect((): (() => void) => {
-    // Small delay to ensure SharePoint is fully loaded
-    const timeoutId = setTimeout(() => {
-      loadConfiguration().catch(error => {
-        console.error('Failed to load configuration:', error);
-      });
-    }, 500);
-    
-    return (): void => clearTimeout(timeoutId);
-  }, []);
-
+  // Restore saveConfiguration, saveConfigurationWithPinState, and saveConfigurationWithOpenState
   const saveConfiguration = async (): Promise<void> => {
     try {
       console.log('🔄 saveConfiguration called with current nav:', nav);
       const config = await configService.loadConfiguration();
       config.items = nav;
-      
-      // Update sidebar configuration
       config.sidebar = {
         isOpen,
         isPinned,
-        position: 'left' // We only support left position for now
+        position: sidebarPosition
       };
-      
-      // Update theme configuration
-      config.theme = currentTheme;
-      
+      config.theme = { ...currentTheme, position: sidebarPosition };
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -198,23 +184,17 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Save configuration with specific pin state (to avoid closure issues)
   const saveConfigurationWithPinState = async (pinState: boolean): Promise<void> => {
     try {
       console.log('🔄 saveConfigurationWithPinState called with pin state:', pinState);
       const config = await configService.loadConfiguration();
       config.items = nav;
-      
-      // Update sidebar configuration with the provided pin state
       config.sidebar = {
         isOpen,
-        isPinned: pinState, // Use the provided pin state instead of state variable
-        position: 'left' // We only support left position for now
+        isPinned: pinState,
+        position: sidebarPosition
       };
-      
-      // Update theme configuration
-      config.theme = currentTheme;
-      
+      config.theme = { ...currentTheme, position: sidebarPosition };
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -227,23 +207,17 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Save configuration with specific open state (to avoid closure issues)
   const saveConfigurationWithOpenState = async (openState: boolean): Promise<void> => {
     try {
       console.log('🔄 saveConfigurationWithOpenState called with open state:', openState);
       const config = await configService.loadConfiguration();
       config.items = nav;
-      
-      // Update sidebar configuration with the provided open state
       config.sidebar = {
-        isOpen: openState, // Use the provided open state instead of state variable
+        isOpen: openState,
         isPinned,
-        position: 'left' // We only support left position for now
+        position: sidebarPosition
       };
-      
-      // Update theme configuration
-      config.theme = currentTheme;
-      
+      config.theme = { ...currentTheme, position: sidebarPosition };
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -256,101 +230,97 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Push effect for pinned sidebar with persistent styling
+  // Restore useEffect for loading configuration on mount
   React.useEffect((): (() => void) => {
-    let mutationObserver: MutationObserver | null = null;
-    let styleElement: HTMLStyleElement | null = null;
-    
-    const applyPersistentStyles = (): void => {
-      const spPageChrome = document.getElementById('SPPageChrome');
-      if (!spPageChrome) {
-        console.warn('⚠️ SPPageChrome element not found');
-        return;
-      }
+    // Small delay to ensure SharePoint is fully loaded
+    const timeoutId = setTimeout(() => {
+      loadConfiguration().catch(error => {
+        console.error('Failed to load configuration:', error);
+      });
+    }, 500);
+    return (): void => clearTimeout(timeoutId);
+  }, []);
 
-      console.log('🔄 Applying sidebar state:', { isOpen, isPinned, sidebarWidth });
-      
+  // Load configuration on component mount
+  React.useEffect((): (() => void) => {
+    const mutationObservers: MutationObserver[] = [];
+    let styleElement: HTMLStyleElement | null = null;
+    const TARGET_IDS = ["SPPageChrome", "spoAppComponent"];
+
+    const applyPersistentStyles = (): void => {
       // Remove existing style element
       if (styleElement) {
         styleElement.remove();
       }
-      
-      // Create new style element with !important rules
       styleElement = document.createElement('style');
       styleElement.id = 'monarch-sidebar-styles';
-      
-      if (isOpen && isPinned) {
-        styleElement.textContent = `
-          #SPPageChrome {
-            margin-left: ${sidebarWidth}px !important;
-            width: calc(100% - ${sidebarWidth}px) !important;
-            transition: margin-left 0.3s, width 0.3s !important;
+      let css = '';
+      for (const id of TARGET_IDS) {
+        if (isOpen && isPinned) {
+          if (sidebarPosition === 'left') {
+            css += `#${id} {\n  margin-left: ${sidebarWidth}px !important;\n  margin-right: 0px !important;\n  width: calc(100% - ${sidebarWidth}px) !important;\n  transition: margin-left 0.3s, width 0.3s !important;\n}\n`;
+          } else {
+            css += `#${id} {\n  margin-right: ${sidebarWidth}px !important;\n  margin-left: 0px !important;\n  width: calc(100% - ${sidebarWidth}px) !important;\n  transition: margin-right 0.3s, width 0.3s !important;\n}\n`;
           }
-        `;
-        console.log('✅ Sidebar pinned - content adjusted with persistent styles');
-      } else {
-        styleElement.textContent = `
-          #SPPageChrome {
-            margin-left: 0px !important;
-            width: 100% !important;
-            transition: margin-left 0.3s, width 0.3s !important;
-          }
-        `;
-        console.log('✅ Sidebar unpinned - content reset with persistent styles');
+        } else {
+          css += `#${id} {\n  margin-left: 0px !important;\n  margin-right: 0px !important;\n  width: 100% !important;\n  transition: margin-left 0.3s, margin-right 0.3s, width 0.3s !important;\n}\n`;
+        }
       }
-      
+      styleElement.textContent = css;
       document.head.appendChild(styleElement);
     };
-    
+
     // Apply styles immediately
     const timeoutId = setTimeout(applyPersistentStyles, 50);
-    
-    // Set up MutationObserver to watch for SharePoint style changes
-    const targetNode = document.getElementById('SPPageChrome');
-    if (targetNode) {
-      mutationObserver = new MutationObserver((mutations) => {
-        let shouldReapply = false;
-        
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-            // Check if SharePoint changed our styles
-            const currentStyle = (mutation.target as HTMLElement).style;
-            if (isOpen && isPinned) {
-              if (currentStyle.marginLeft !== `${sidebarWidth}px` || 
-                  currentStyle.width !== `calc(100% - ${sidebarWidth}px)`) {
-                shouldReapply = true;
-              }
-            } else {
-              if (currentStyle.marginLeft !== '0px' || currentStyle.width !== '100%') {
-                shouldReapply = true;
+
+    // Set up MutationObservers for both target elements
+    for (const id of TARGET_IDS) {
+      const targetNode = document.getElementById(id);
+      if (targetNode) {
+        const observer = new MutationObserver((mutations) => {
+          let shouldReapply = false;
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+              const currentStyle = (mutation.target as HTMLElement).style;
+              if (isOpen && isPinned) {
+                if (sidebarPosition === 'left') {
+                  if (currentStyle.marginLeft !== `${sidebarWidth}px` || currentStyle.marginRight !== '0px' || currentStyle.width !== `calc(100% - ${sidebarWidth}px)`) {
+                    shouldReapply = true;
+                  }
+                } else {
+                  if (currentStyle.marginRight !== `${sidebarWidth}px` || currentStyle.marginLeft !== '0px' || currentStyle.width !== `calc(100% - ${sidebarWidth}px)`) {
+                    shouldReapply = true;
+                  }
+                }
+              } else {
+                if (currentStyle.marginLeft !== '0px' || currentStyle.marginRight !== '0px' || currentStyle.width !== '100%') {
+                  shouldReapply = true;
+                }
               }
             }
+          });
+          if (shouldReapply) {
+            console.log(`🔄 SharePoint modified styles on #${id}, reapplying...`);
+            setTimeout(applyPersistentStyles, 10);
           }
         });
-        
-        if (shouldReapply) {
-          console.log('🔄 SharePoint modified styles, reapplying...');
-          setTimeout(applyPersistentStyles, 10);
-        }
-      });
-      
-      mutationObserver.observe(targetNode, {
-        attributes: true,
-        attributeFilter: ['style']
-      });
+        observer.observe(targetNode, {
+          attributes: true,
+          attributeFilter: ['style']
+        });
+        mutationObservers.push(observer);
+      }
     }
-    
+
     return (): void => {
       clearTimeout(timeoutId);
-      if (mutationObserver) {
-        mutationObserver.disconnect();
-      }
+      mutationObservers.forEach(observer => observer.disconnect());
       if (styleElement) {
         styleElement.remove();
       }
-      console.log('🧹 Cleanup: SPPageChrome styles and observers removed');
+      console.log('🧹 Cleanup: sidebar styles and observers removed');
     };
-  }, [isOpen, isPinned, sidebarWidth]);
+  }, [isOpen, isPinned, sidebarWidth, sidebarPosition]);
 
   // Utility to find an item by id
   const findItemById = (items: NavItem[], id: number): NavItem | undefined => {
@@ -378,11 +348,11 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       config.sidebar = {
         isOpen,
         isPinned,
-        position: 'left' // We only support left position for now
+        position: sidebarPosition
       };
       
       // Update theme configuration
-      config.theme = currentTheme;
+      config.theme = { ...currentTheme, position: sidebarPosition };
       
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -474,6 +444,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   // Theme handlers
   const handleThemeSave = (theme: IThemeConfig): void => {
     setCurrentTheme(theme);
+    if (theme.position) setSidebarPosition(theme.position);
     setThemeModalVisible(false);
     // Save theme to configuration
     saveConfiguration().catch(error => {
@@ -482,8 +453,8 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   };
 
   const handleThemeChange = (theme: IThemeConfig): void => {
-    // Reactive updates without saving
     setCurrentTheme(theme);
+    if (theme.position) setSidebarPosition(theme.position);
   };
 
   const handleThemeReset = (): void => {
@@ -520,43 +491,55 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
 
   console.log('🔄 MonarchSidenavSearchToggler: Rendering component - isOpen:', isOpen, 'isLoading:', isLoading, 'toggleTop:', toggleTop);
   
+  // Sidebar position logic
+  const sidebarHidden = -1 * (sidebarWidth + 20);
+  const sidebarStyle: React.CSSProperties = sidebarPosition === 'left'
+    ? { left: isOpen ? 0 : sidebarHidden, right: 'auto' }
+    : { right: isOpen ? 0 : sidebarHidden, left: 'auto' };
+  // Toggle button position logic
+  const toggleButtonStyle: React.CSSProperties = sidebarPosition === 'left'
+    ? { left: 0, right: 'auto' }
+    : { right: 0, left: 'auto' };
+  
   return (
     <>
       {/* Always render the toggle button, even during loading */}
-      <SidebarToggleButton
-        isOpen={isOpen}
-        top={toggleTop}
-        onToggle={() => {
-          console.log('🔄 Toggle button clicked, current isOpen:', isOpen);
-          setIsOpen(open => {
-            const newOpen = !open;
-            console.log('🔄 Setting isOpen to:', newOpen);
-            setTimeout(() => {
-              saveConfigurationWithOpenState(newOpen).catch(error => {
-                console.error('Failed to save configuration:', error);
-              });
-            }, 100);
-            return newOpen;
-          });
-        }}
-        onDrag={(newTop) => {
-          setToggleTop(newTop);
-          configService.setTogglerPosition(String(newTop)); // Store in localStorage only
-        }}
-        sidebarWidth={sidebarWidth}
-      />
+      <div style={toggleButtonStyle}>
+        <SidebarToggleButton
+          isOpen={isOpen}
+          top={toggleTop}
+          onToggle={() => {
+            console.log('🔄 Toggle button clicked, current isOpen:', isOpen);
+            setIsOpen(open => {
+              const newOpen = !open;
+              console.log('🔄 Setting isOpen to:', newOpen);
+              setTimeout(() => {
+                saveConfigurationWithOpenState(newOpen).catch(error => {
+                  console.error('Failed to save configuration:', error);
+                });
+              }, 100);
+              return newOpen;
+            });
+          }}
+          onDrag={(newTop) => {
+            setToggleTop(newTop);
+            configService.setTogglerPosition(String(newTop)); // Store in localStorage only
+          }}
+          sidebarWidth={sidebarWidth}
+        />
+      </div>
       <div
         className={styles.sidebarContainer}
         style={{
-          left: isOpen ? 0 : sidebarHiddenLeft,
+          ...sidebarStyle,
           position: 'fixed',
           top: 0,
           height: '100vh',
           zIndex: 2000,
           width: sidebarWidth,
           background: currentTheme.backgroundColor,
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-          transition: 'left 0.3s'
+          boxShadow: sidebarPosition === 'left' ? '2px 0 8px rgba(0,0,0,0.1)' : '-2px 0 8px rgba(0,0,0,0.1)',
+          transition: sidebarPosition === 'left' ? 'left 0.3s' : 'right 0.3s'
         }}
       >
         <div className={styles.sidebar}>
