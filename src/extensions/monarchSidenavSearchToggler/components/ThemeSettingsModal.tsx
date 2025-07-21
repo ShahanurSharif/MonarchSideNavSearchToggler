@@ -11,15 +11,17 @@ import styles from '../MonarchSidenavSearchToggler.module.scss';
 export interface IThemeSettingsModalProps {
   isVisible: boolean;
   theme: IThemeConfig;
-  onSave: (theme: IThemeConfig) => void;
+  sidebarPosition: 'left' | 'right';
+  onSave: (theme: IThemeConfig, sidebarPosition: 'left' | 'right') => void;
   onCancel: () => void;
   onReset: () => void;
-  onThemeChange?: (theme: IThemeConfig) => void; // For reactive updates without saving
+  onThemeChange?: (theme: IThemeConfig, sidebarPosition: 'left' | 'right') => void; // For reactive updates without saving
 }
 
 export interface IThemeSettingsModalState {
   formData: IThemeConfig;
   hasChanges: boolean;
+  sidebarPosition: 'left' | 'right';
 }
 
 export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps, IThemeSettingsModalState> {
@@ -27,7 +29,8 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
     super(props);
     this.state = {
       formData: { ...props.theme },
-      hasChanges: false
+      hasChanges: false,
+      sidebarPosition: props.sidebarPosition
     };
   }
 
@@ -48,7 +51,7 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
 
   public render(): React.ReactElement<IThemeSettingsModalProps> {
     const { isVisible, onCancel } = this.props;
-    const { formData, hasChanges } = this.state;
+    const { formData, hasChanges, sidebarPosition } = this.state;
 
     return (
       <Modal
@@ -166,8 +169,8 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
                   { key: 'left', text: 'Left' },
                   { key: 'right', text: 'Right' }
                 ]}
-                selectedKey={formData.position || 'left'}
-                onChange={(_, option) => this.updateTheme('position', option?.key as 'left' | 'right')}
+                selectedKey={sidebarPosition}
+                onChange={(_, option) => this.handleSidebarPositionChange(option?.key as 'left' | 'right')}
                 styles={{ root: { width: 180, marginTop: 4 } }}
               />
             </div>
@@ -271,15 +274,19 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
       ...this.state.formData,
       [key]: value
     };
-    
     this.setState({
       formData: updatedTheme,
       hasChanges: true
     });
-
-    // Call onThemeChange for reactive updates without saving
     if (this.props.onThemeChange) {
-      this.props.onThemeChange(updatedTheme);
+      this.props.onThemeChange(updatedTheme, this.state.sidebarPosition);
+    }
+  };
+
+  private handleSidebarPositionChange = (position: 'left' | 'right') => {
+    this.setState({ sidebarPosition: position, hasChanges: true });
+    if (this.props.onThemeChange) {
+      this.props.onThemeChange(this.state.formData, position);
     }
   };
 
@@ -296,6 +303,6 @@ export class ThemeSettingsModal extends React.Component<IThemeSettingsModalProps
   };
 
   private onSave = (): void => {
-    this.props.onSave(this.state.formData);
+    this.props.onSave(this.state.formData, this.state.sidebarPosition);
   };
 } 

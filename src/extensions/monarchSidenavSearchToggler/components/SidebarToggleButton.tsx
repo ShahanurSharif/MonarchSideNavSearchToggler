@@ -7,6 +7,7 @@ interface SidebarToggleButtonProps {
   onToggle: () => void;
   onDrag: (newTop: number) => void;
   sidebarWidth?: number;
+  position?: 'left' | 'right';
 }
 
 export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
@@ -14,7 +15,8 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
   top,
   onToggle,
   onDrag,
-  sidebarWidth = 300
+  sidebarWidth = 300,
+  position = 'left'
 }) => {
   const btnRef = React.useRef<HTMLButtonElement>(null);
   const dragState = React.useRef({ isDragging: false, dragMoved: false });
@@ -76,12 +78,15 @@ export const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({
       className={styles.sidebarToggleButton}
       style={{
         top,
-        left: isOpen ? sidebarWidth : 0
+        ...(position === 'left'
+          ? { left: isOpen ? sidebarWidth : 0, right: 'auto' }
+          : { right: isOpen ? sidebarWidth : 0, left: 'auto' })
       }}
       aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
       onClick={handleClick}
       type="button"
     >
+      {/* You can use a different icon for right if desired */}
       {isOpen ? '|||' : '|||'}
     </button>
   );

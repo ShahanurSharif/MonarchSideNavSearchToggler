@@ -28,7 +28,7 @@ export interface IThemeConfig {
   logoSize: string;
   siteName: string;
   siteUrl: string;
-  position?: 'left' | 'right'; // NEW: sidebar position
+  position?: 'left' | 'right';
 }
 
 export interface ISidebarConfig {
@@ -97,11 +97,11 @@ export const DefaultTheme: IThemeConfig = {
   logoSize: '40px',
   siteName: '',
   siteUrl: '',
-  position: 'left' // NEW: default position
+  position: 'left'
 };
 
 export const DefaultNavigationConfig: ISidebarNavConfig = {
-  version: '2.1.8.0',
+  version: '2.1.9.0',
   items: [
     {
       id: 1,
@@ -180,7 +180,7 @@ export const DefaultNavigationConfig: ISidebarNavConfig = {
   sidebar: {
     isOpen: true,
     isPinned: false,
-    position: DefaultTheme.position || 'left' // NEW: use theme position
+    position: DefaultTheme.position || 'left'
   },
   searchEnabled: true,
   autoSave: true,

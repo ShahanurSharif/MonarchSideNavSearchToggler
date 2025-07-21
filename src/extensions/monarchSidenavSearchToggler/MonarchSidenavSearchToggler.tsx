@@ -130,7 +130,6 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       // Set theme configuration
       if (config.theme) {
         setCurrentTheme(config.theme);
-        if (config.theme.position) setSidebarPosition(config.theme.position);
         // Set sidebar width from theme
         if (config.theme.sidebarWidth) {
           const width = parseInt(config.theme.sidebarWidth.replace('px', ''), 10);
@@ -160,41 +159,18 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     }
   };
 
-  // Restore saveConfiguration, saveConfigurationWithPinState, and saveConfigurationWithOpenState
-  const saveConfiguration = async (): Promise<void> => {
-    try {
-      console.log('🔄 saveConfiguration called with current nav:', nav);
-      const config = await configService.loadConfiguration();
-      config.items = nav;
-      config.sidebar = {
-        isOpen,
-        isPinned,
-        position: sidebarPosition
-      };
-      config.theme = { ...currentTheme, position: sidebarPosition };
-      console.log('🔄 Saving config with sidebar state:', config.sidebar);
-      const success = await configService.saveConfiguration(config);
-      if (success) {
-        console.log('✅ Configuration saved successfully');
-      } else {
-        console.error('❌ Configuration save returned false');
-      }
-    } catch (error) {
-      console.error('❌ Failed to save configuration:', error);
-    }
-  };
-
+  // Restore saveConfigurationWithPinState, and saveConfigurationWithOpenState
   const saveConfigurationWithPinState = async (pinState: boolean): Promise<void> => {
     try {
       console.log('🔄 saveConfigurationWithPinState called with pin state:', pinState);
       const config = await configService.loadConfiguration();
       config.items = nav;
+      config.theme = { ...currentTheme, position: sidebarPosition };
       config.sidebar = {
         isOpen,
         isPinned: pinState,
         position: sidebarPosition
       };
-      config.theme = { ...currentTheme, position: sidebarPosition };
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -212,12 +188,12 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       console.log('🔄 saveConfigurationWithOpenState called with open state:', openState);
       const config = await configService.loadConfiguration();
       config.items = nav;
+      config.theme = { ...currentTheme, position: sidebarPosition };
       config.sidebar = {
         isOpen: openState,
         isPinned,
         position: sidebarPosition
       };
-      config.theme = { ...currentTheme, position: sidebarPosition };
       console.log('🔄 Saving config with sidebar state:', config.sidebar);
       const success = await configService.saveConfiguration(config);
       if (success) {
@@ -343,17 +319,12 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
     try {
       const config = await configService.loadConfiguration();
       config.items = navArray;
-      
-      // Update sidebar configuration
+      config.theme = { ...currentTheme, position: sidebarPosition };
       config.sidebar = {
         isOpen,
         isPinned,
         position: sidebarPosition
       };
-      
-      // Update theme configuration
-      config.theme = { ...currentTheme, position: sidebarPosition };
-      
       const success = await configService.saveConfiguration(config);
       if (success) {
         console.log('✅ Configuration saved successfully');
@@ -442,52 +413,29 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   const handleModalCancel = (): void => setModalState({ ...modalState, isVisible: false });
 
   // Theme handlers
-  const handleThemeSave = (theme: IThemeConfig): void => {
-    setCurrentTheme(theme);
-    if (theme.position) setSidebarPosition(theme.position);
-    setThemeModalVisible(false);
-    // Save theme to configuration
-    saveConfiguration().catch(error => {
-      console.error('Failed to save theme configuration:', error);
-    });
-  };
-
-  const handleThemeChange = (theme: IThemeConfig): void => {
-    setCurrentTheme(theme);
-    if (theme.position) setSidebarPosition(theme.position);
-  };
-
   const handleThemeReset = (): void => {
     setCurrentTheme(DefaultTheme);
   };
 
-  // Show loading state inside sidebar
-  const renderLoadingContent = (): JSX.Element => (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      padding: '40px 20px',
-      color: currentTheme.textColor
-    }}>
-      <Icon iconName="Sync" style={{ 
-        fontSize: '32px', 
-        animation: 'spin 1s linear infinite',
-        color: currentTheme.textColor,
-        marginBottom: '16px'
-      }} />
-      <div style={{ 
-        fontSize: '14px', 
-        color: currentTheme.textColor,
-        textAlign: 'center',
-        lineHeight: '1.4'
-      }}>
-        Loading navigation...
-      </div>
-    </div>
-  );
+  // Save config with sidebar position only
+  const saveConfigurationWithSidebarPosition = async (theme: IThemeConfig, newSidebarPosition: 'left' | 'right'): Promise<void> => {
+    try {
+      const config = await configService.loadConfiguration();
+      config.theme = { ...theme, position: newSidebarPosition };
+      config.sidebar = {
+        ...config.sidebar,
+        position: newSidebarPosition
+      };
+      const success = await configService.saveConfiguration(config);
+      if (success) {
+        console.log('✅ Configuration saved successfully with sidebar position:', newSidebarPosition);
+      } else {
+        console.error('❌ Configuration save returned false');
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to save configuration:', error);
+    }
+  };
 
   console.log('🔄 MonarchSidenavSearchToggler: Rendering component - isOpen:', isOpen, 'isLoading:', isLoading, 'toggleTop:', toggleTop);
   
@@ -503,147 +451,148 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   
   return (
     <>
-      {/* Always render the toggle button, even during loading */}
-      <div style={toggleButtonStyle}>
-        <SidebarToggleButton
-          isOpen={isOpen}
-          top={toggleTop}
-          onToggle={() => {
-            console.log('🔄 Toggle button clicked, current isOpen:', isOpen);
-            setIsOpen(open => {
-              const newOpen = !open;
-              console.log('🔄 Setting isOpen to:', newOpen);
-              setTimeout(() => {
-                saveConfigurationWithOpenState(newOpen).catch(error => {
-                  console.error('Failed to save configuration:', error);
+      {/* Only render sidebar and toggle button after config is loaded to avoid flash of wrong position */}
+      {!isLoading && (
+        <>
+          <div style={toggleButtonStyle}>
+            <SidebarToggleButton
+              isOpen={isOpen}
+              top={toggleTop}
+              onToggle={() => {
+                console.log('🔄 Toggle button clicked, current isOpen:', isOpen);
+                setIsOpen(open => {
+                  const newOpen = !open;
+                  console.log('🔄 Setting isOpen to:', newOpen);
+                  setTimeout(() => {
+                    saveConfigurationWithOpenState(newOpen).catch(error => {
+                      console.error('Failed to save configuration:', error);
+                    });
+                  }, 100);
+                  return newOpen;
                 });
-              }, 100);
-              return newOpen;
-            });
-          }}
-          onDrag={(newTop) => {
-            setToggleTop(newTop);
-            configService.setTogglerPosition(String(newTop)); // Store in localStorage only
-          }}
-          sidebarWidth={sidebarWidth}
-        />
-      </div>
-      <div
-        className={styles.sidebarContainer}
-        style={{
-          ...sidebarStyle,
-          position: 'fixed',
-          top: 0,
-          height: '100vh',
-          zIndex: 2000,
-          width: sidebarWidth,
-          background: currentTheme.backgroundColor,
-          boxShadow: sidebarPosition === 'left' ? '2px 0 8px rgba(0,0,0,0.1)' : '-2px 0 8px rgba(0,0,0,0.1)',
-          transition: sidebarPosition === 'left' ? 'left 0.3s' : 'right 0.3s'
-        }}
-      >
-        <div className={styles.sidebar}>
-          <div className={styles.sidebarHeader}>
-            {(currentTheme.logoUrl || currentTheme.siteName) && (
-              <a 
-                href={currentTheme.siteUrl || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className={styles.siteLink}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  textDecoration: 'none',
-                  color: currentTheme.textColor
-                }}
-              >
-                {currentTheme.logoUrl && (
-                  <img 
-                    src={currentTheme.logoUrl} 
-                    alt="Site logo" 
-                    style={{ 
-                      width: currentTheme.logoSize || '40px',
-                      height: 'auto',
-                      maxHeight: '40px'
-                    }} 
-                  />
-                )}
-                {currentTheme.siteName && (
-                  <span className={styles.siteName}>
-                    {currentTheme.siteName}
-                  </span>
-                )}
-              </a>
-            )}
-          </div>
-          <div className={styles.searchContainer}>
-            <Icon iconName="Search" className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Search navigation..."
-              className={styles.searchInput}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              }}
+              onDrag={(newTop) => {
+                setToggleTop(newTop);
+                configService.setTogglerPosition(String(newTop)); // Store in localStorage only
+              }}
+              sidebarWidth={sidebarWidth}
+              position={sidebarPosition}
             />
           </div>
-          <div className={styles.navigationContent}>
-            {isLoading ? (
-              renderLoadingContent()
-            ) : (
-              <SidebarNavigation
-                items={nav}
-                isConfigMode={isConfig}
-                searchQuery={search}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onAddChild={handleAddChild}
-                onAddRoot={handleAddRoot}
-                theme={currentTheme}
-              />
-            )}
-          </div>
-          <div className={styles.sidebarFooter}>
-            <h2 className={styles.sidebarTitle}>Navigation</h2>
-            <div className={styles.headerButtons}>
-              <button
-                className={styles.headerButton}
-                aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                onClick={async () => {
-                  const newPinned = !isPinned;
-                  setIsPinned(newPinned);
-                  // Save configuration immediately with the new pin state
-                  try {
-                    await saveConfigurationWithPinState(newPinned);
-                    console.log('✅ Pin state saved successfully:', newPinned);
-                  } catch (error) {
-                    console.error('❌ Failed to save pin state:', error);
-                    // Revert state if save failed
-                    setIsPinned(!newPinned);
-                  }
-                }}
-                style={{ marginRight: 8 }}
-              >
-                <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
-              </button>
-              {isConfig && (
-                <>
-                  <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
-                    <Icon iconName="Add" />
+          <div
+            className={styles.sidebarContainer}
+            style={{
+              ...sidebarStyle,
+              position: 'fixed',
+              top: 0,
+              height: '100vh',
+              zIndex: 2000,
+              width: sidebarWidth,
+              background: currentTheme.backgroundColor,
+              boxShadow: sidebarPosition === 'left' ? '2px 0 8px rgba(0,0,0,0.1)' : '-2px 0 8px rgba(0,0,0,0.1)',
+              transition: sidebarPosition === 'left' ? 'left 0.3s' : 'right 0.3s'
+            }}
+          >
+            <div className={styles.sidebar}>
+              <div className={styles.sidebarHeader}>
+                {(currentTheme.logoUrl || currentTheme.siteName) && (
+                  <a 
+                    href={currentTheme.siteUrl || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.siteLink}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      textDecoration: 'none',
+                      color: currentTheme.textColor
+                    }}
+                  >
+                    {currentTheme.logoUrl && (
+                      <img 
+                        src={currentTheme.logoUrl} 
+                        alt="Site logo" 
+                        style={{ 
+                          width: currentTheme.logoSize || '40px',
+                          height: 'auto',
+                          maxHeight: '40px'
+                        }} 
+                      />
+                    )}
+                    {currentTheme.siteName && (
+                      <span className={styles.siteName}>
+                        {currentTheme.siteName}
+                      </span>
+                    )}
+                  </a>
+                )}
+              </div>
+              <div className={styles.searchContainer}>
+                <Icon iconName="Search" className={styles.searchIcon} />
+                <input
+                  type="text"
+                  placeholder="Search navigation..."
+                  className={styles.searchInput}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              <div className={styles.navigationContent}>
+                <SidebarNavigation
+                  items={nav}
+                  isConfigMode={isConfig}
+                  searchQuery={search}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onAddChild={handleAddChild}
+                  onAddRoot={handleAddRoot}
+                  theme={currentTheme}
+                />
+              </div>
+              <div className={styles.sidebarFooter}>
+                <h2 className={styles.sidebarTitle}>Navigation</h2>
+                <div className={styles.headerButtons}>
+                  <button
+                    className={styles.headerButton}
+                    aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                    title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                    onClick={async () => {
+                      const newPinned = !isPinned;
+                      setIsPinned(newPinned);
+                      // Save configuration immediately with the new pin state
+                      try {
+                        await saveConfigurationWithPinState(newPinned);
+                        console.log('✅ Pin state saved successfully:', newPinned);
+                      } catch (error) {
+                        console.error('❌ Failed to save pin state:', error);
+                        // Revert state if save failed
+                        setIsPinned(!newPinned);
+                      }
+                    }}
+                    style={{ marginRight: 8 }}
+                  >
+                    <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
                   </button>
-                  <button className={styles.headerButton} aria-label="Theme Settings" title="Theme Settings" onClick={() => setThemeModalVisible(true)} style={{marginRight: 8}}>
-                    <Icon iconName="Settings" />
+                  {isConfig && (
+                    <>
+                      <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
+                        <Icon iconName="Add" />
+                      </button>
+                      <button className={styles.headerButton} aria-label="Theme Settings" title="Theme Settings" onClick={() => setThemeModalVisible(true)} style={{marginRight: 8}}>
+                        <Icon iconName="Settings" />
+                      </button>
+                    </>
+                  )}
+                  <button className={styles.headerButton} aria-label="Edit Mode" title="Edit Navigation" onClick={() => setIsConfig(c => !c)}>
+                    <Icon iconName="Edit" />
                   </button>
-                </>
-              )}
-              <button className={styles.headerButton} aria-label="Edit Mode" title="Edit Navigation" onClick={() => setIsConfig(c => !c)}>
-                <Icon iconName="Edit" />
-              </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
       {modalState.isVisible && (
         <NavigationConfigModal
           isVisible={modalState.isVisible}
@@ -659,11 +608,22 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
       {themeModalVisible && (
         <ThemeSettingsModal
           isVisible={themeModalVisible}
-          theme={currentTheme}
-          onSave={handleThemeSave}
+          theme={{ ...currentTheme, position: sidebarPosition }}
+          sidebarPosition={sidebarPosition}
+          onSave={(theme, newSidebarPosition) => {
+            setCurrentTheme(theme);
+            setSidebarPosition(newSidebarPosition);
+            setThemeModalVisible(false);
+            saveConfigurationWithSidebarPosition(theme, newSidebarPosition).catch(error => {
+              console.error('Failed to save theme configuration:', error);
+            });
+          }}
           onCancel={() => setThemeModalVisible(false)}
           onReset={handleThemeReset}
-          onThemeChange={handleThemeChange}
+          onThemeChange={(theme, newSidebarPosition) => {
+            setCurrentTheme(theme);
+            setSidebarPosition(newSidebarPosition);
+          }}
         />
       )}
     </>

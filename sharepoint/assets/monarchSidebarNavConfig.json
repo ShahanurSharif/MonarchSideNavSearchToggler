@@ -1,5 +1,5 @@
 {
-  "version": "2.1.8.0",
+  "version": "2.1.9.0",
   "items": [
     {
       "id": 1,
@@ -77,7 +77,7 @@
   "theme": {
     "primaryColor": "#0078d4",
     "secondaryColor": "#106ebe",
-    "backgroundColor": "#ffffff",
+    "backgroundColor": "#fcfcfc",
     "textColor": "#323130",
     "hoverColor": "#f3f2f1",
     "fontFamily": "Segoe UI, system-ui, sans-serif",
@@ -86,11 +86,16 @@
     "sidebarWidth": "300px",
     "borderEnabled": false,
     "borderColor": "#d2d0ce",
-    "paddingTopBottom": "2px"
+    "paddingTopBottom": "2px",
+    "logoUrl": "",
+    "logoSize": "40px",
+    "siteName": "",
+    "siteUrl": "",
+    "position": "left"
   },
-  "sidebar":{
-    "isOpen": true,
-    "isPinned": false,
+  "sidebar": {
+    "isOpen": false,
+    "isPinned": true,
     "position": "left"
   },
   "searchEnabled": true,
