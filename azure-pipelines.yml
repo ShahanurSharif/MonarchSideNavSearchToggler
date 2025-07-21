@@ -1,5 +1,3 @@
-# azure-pipelines.yml
-
 trigger:
   tags:
     include:
@@ -16,7 +14,8 @@ variables:
   appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
 
 steps:
-- checkout: self
+  - checkout: self
+  - script: echo "Hello, pipeline is working!"
   
   - task: NodeTool@0
     inputs:
