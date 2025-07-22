@@ -8,17 +8,8 @@ pr: none
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  solutionFolder: '$(System.DefaultWorkingDirectory)'
-  sppkgFile: 'monarch-sidenav.sppkg' # <-- Make sure this matches your built .sppkg file
-  sppkgPath: '$(solutionFolder)/sharepoint/solution/$(sppkgFile)'
-  appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
-
 steps:
   - checkout: self
-
-  - script: echo "Pipeline started for Monarch SideNav"
-    displayName: 'Start Pipeline'
 
   - task: NodeTool@0
     inputs:
@@ -37,51 +28,41 @@ steps:
     displayName: 'Package SPFx solution'
 
   - script: |
-      echo "Installing CLI for Microsoft 365 and jq..."
       npm install -g @pnp/cli-microsoft365
-      sudo apt-get update
-      sudo apt-get install -y jq
-    displayName: 'Install CLI for Microsoft 365 and jq'
+      sudo apt-get update && sudo apt-get install -y jq
 
-  - script: |
-      echo "Logging in to Microsoft 365..."
-      m365 login --authType password --userName "$(M365_USERNAME)" --password "$(M365_PASSWORD)"
+      echo "Logging in with client secret..."
+      m365 login --authType secret \
+        --appId "$(app_id)" \
+        --tenant "$(tenant_id)" \
+        --secret "$(client_secret)"
       if [ $? -ne 0 ]; then
         echo "❌ M365 login failed!"
         exit 1
       fi
 
-      echo "Setting SPO URL context..."
-      m365 spo set --url "$(appCatalogUrl)"
-      if [ $? -ne 0 ]; then
-        echo "❌ Setting SPO URL failed!"
-        exit 1
-      fi
-
-      echo "Checking for package file..."
-      ls -lh $(sppkgPath)
-      if [ ! -f "$(sppkgPath)" ]; then
-        echo "❌ .sppkg file not found at $(sppkgPath)"
-        exit 1
-      fi
+      # Hardcoded path to your .sppkg file
+      PACKAGE_PATH="$(System.DefaultWorkingDirectory)/sharepoint/solution/monarch-sidenav.sppkg"
+      APP_CATALOG_URL="https://monarch360demo.sharepoint.com/sites/appcatalog"
 
       echo "Uploading package to App Catalog..."
-      m365 spo app add -p "$(sppkgPath)" --overwrite --appCatalogUrl "$(appCatalogUrl)"
+      m365 spo app add -p "$PACKAGE_PATH" --overwrite --appCatalogUrl "$APP_CATALOG_URL"
       if [ $? -ne 0 ]; then
         echo "❌ App upload failed!"
         exit 1
       fi
 
-      echo "Retrieving App ID from App Catalog..."
-      APP_ID=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "'$(sppkgFile)'") | .ID')
-      if [ -z "$APP_ID" ]; then
-        echo "❌ Could not find App ID in catalog!"
+      echo "Retrieving App ID for deployment..."
+      PACKAGE_NAME="monarch-sidenav.sppkg"
+      APP_ID_DEPLOY=$(m365 spo app list --appCatalogUrl "$APP_CATALOG_URL" --output json | jq -r '.[] | select(.Name == "'$PACKAGE_NAME'") | .ID')
+      if [ -z "$APP_ID_DEPLOY" ]; then
+        echo "❌ Could not find App ID for deployment!"
         exit 1
       fi
-      echo "✅ App ID found: $APP_ID"
+      echo "✅ Package App ID found: $APP_ID_DEPLOY"
 
-      echo "Deploying App..."
-      m365 spo app deploy --id "$APP_ID" --appCatalogUrl "$(appCatalogUrl)" --wait
+      echo "Deploying SPFx package..."
+      m365 spo app deploy --id "$APP_ID_DEPLOY" --appCatalogUrl "$APP_CATALOG_URL" --wait
       if [ $? -ne 0 ]; then
         echo "❌ App deployment failed!"
         exit 1
@@ -90,8 +71,6 @@ steps:
       echo "🎉 App deployed successfully!"
     displayName: 'Deploy SPFx App to SharePoint App Catalog'
     env:
-      M365_USERNAME: $(M365_USERNAME)
-      M365_PASSWORD: $(M365_PASSWORD)
-      sppkgPath: $(sppkgPath)
-      sppkgFile: $(sppkgFile)
-      appCatalogUrl: $(appCatalogUrl)
+      app_id: $(app_id)
+      client_secret: $(client_secret)
+      tenant_id: $(tenant_id)
