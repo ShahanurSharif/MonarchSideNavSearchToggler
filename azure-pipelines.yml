@@ -10,40 +10,46 @@ pool:
 
 variables:
   solutionFolder: '$(System.DefaultWorkingDirectory)'
-  sppkgPath: '$(solutionFolder)/sharepoint/solution/*.sppkg'
+  sppkgPath: '$(solutionFolder)/sharepoint/solution/monarch-sidenav.sppkg'
   appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
 
 steps:
   - checkout: self
+
   - script: echo "Hello, pipeline is working!"
-  
+    displayName: 'Pipeline Test Message'
+
   - task: NodeTool@0
     inputs:
       versionSpec: '20.x'
     displayName: 'Install Node.js'
-  
+
   - script: npm ci
     displayName: 'Install dependencies'
-  
+
   - script: |
-      gulp build --ship
-      gulp bundle --ship
+      npx gulp build --ship
+      npx gulp bundle --ship
     displayName: 'Build and bundle'
-  
-  - script: gulp package-solution --ship
+
+  - script: npx gulp package-solution --ship
     displayName: 'Package solution'
-  
+
   - script: npm install -g @pnp/cli-microsoft365
-    displayName: 'Install Office 365 CLI'
-  
+    displayName: 'Install CLI for Microsoft 365'
+
   - script: |
-      m365 login --authType password --userName $(M365_USERNAME) --password $(M365_PASSWORD)
-      m365 spo app add -p $(sppkgPath) --overwrite --appCatalogUrl $(appCatalogUrl)
-      m365 spo app deploy --name "monarch-sidenav.sppkg" --appCatalogUrl $(appCatalogUrl) --scope tenant
+      m365 login --authType password --userName "$(M365_USERNAME)" --password "$(M365_PASSWORD)"
+      m365 spo app add -p "$(sppkgPath)" --overwrite --appCatalogUrl "$(appCatalogUrl)"
+      # Get the appId for deployment
+      APP_ID=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "monarch-sidenav.sppkg") | .ID')
+      echo "Deploying appId: $APP_ID"
+      m365 spo app deploy --appId $APP_ID --appCatalogUrl "$(appCatalogUrl)" --wait
     displayName: 'Deploy to SharePoint App Catalog'
     env:
       M365_USERNAME: $(M365_USERNAME)
       M365_PASSWORD: $(M365_PASSWORD)
-  
-  # Optional: Notify on deployment, etc.
-  
+      sppkgPath: $(sppkgPath)
+      appCatalogUrl: $(appCatalogUrl)
+
+# Optionally, add notification or artifact publishing steps here
