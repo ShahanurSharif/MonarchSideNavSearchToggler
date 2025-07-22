@@ -8,6 +8,15 @@ pr: none
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  solutionFolder: '$(System.DefaultWorkingDirectory)'
+  sppkgFile: 'monarch-sidenav.sppkg' # <-- update if your package filename differs!
+  sppkgPath: '$(solutionFolder)/sharepoint/solution/$(sppkgFile)'
+  appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
+  # Your Azure AD App Registration IDs (do not hardcode secrets)
+  APP_ID: '5ad16260-d421-4aac-9e46-e8206d73809a'
+  TENANT_ID: '0f2587a8-5a33-4f75-9f71-5f7accedb502'
+
 steps:
   - checkout: self
 
@@ -31,17 +40,15 @@ steps:
       npm install -g @pnp/cli-microsoft365
       sudo apt-get update && sudo apt-get install -y jq
 
-      echo "Logging in with client secret..."
-      m365 login --authType secret \
-        --appId "$(app_id)" \
-        --tenant "$(tenant_id)" \
-        --secret "$(client_secret)"
+      echo "Authenticating with Federated Identity..."
+      m365 login --authType federatedIdentity \
+        --appId "$(APP_ID)" \
+        --tenant "$(TENANT_ID)"
       if [ $? -ne 0 ]; then
-        echo "❌ M365 login failed!"
+        echo "❌ M365 federated identity login failed!"
         exit 1
       fi
 
-      # Hardcoded path to your .sppkg file
       PACKAGE_PATH="$(System.DefaultWorkingDirectory)/sharepoint/solution/monarch-sidenav.sppkg"
       APP_CATALOG_URL="https://monarch360demo.sharepoint.com/sites/appcatalog"
 
@@ -71,6 +78,5 @@ steps:
       echo "🎉 App deployed successfully!"
     displayName: 'Deploy SPFx App to SharePoint App Catalog'
     env:
-      app_id: $(app_id)
-      client_secret: $(client_secret)
-      tenant_id: $(tenant_id)
+      APP_ID: $(APP_ID)
+      TENANT_ID: $(TENANT_ID)
