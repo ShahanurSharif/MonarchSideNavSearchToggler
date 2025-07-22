@@ -38,10 +38,11 @@ steps:
     displayName: 'Package solution'
 
   - script: |
-      echo "Installing M365 CLI..."
+      echo "Installing required tools..."
       npm install -g @pnp/cli-microsoft365
-      echo "M365 CLI installed"
-    displayName: 'Install CLI for Microsoft 365'
+      sudo apt-get update && sudo apt-get install -y jq
+      echo "Tools installed successfully"
+    displayName: 'Install required tools'
 
   - script: |
       echo "Logging in to Microsoft 365..."
@@ -56,11 +57,17 @@ steps:
       echo "App added to catalog"
       
       echo "Getting app ID for deployment..."
-      APP_ID=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "monarch-sidenav.sppkg") | .ID')
+      echo "Listing apps in catalog..."
+      m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json > app_list.json
+      echo "App list saved to app_list.json"
+      
+      APP_ID=$(jq -r '.[] | select(.Name == "monarch-sidenav.sppkg") | .ID' app_list.json)
       echo "App ID: $APP_ID"
       
       if [ -z "$APP_ID" ] || [ "$APP_ID" = "null" ]; then
-        echo "Error: Could not find app ID"
+        echo "Error: Could not find app ID for monarch-sidenav.sppkg"
+        echo "Available apps:"
+        jq -r '.[] | "Name: \(.Name), ID: \(.ID)"' app_list.json
         exit 1
       fi
       
