@@ -9,15 +9,13 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  solutionFolder: '$(System.DefaultWorkingDirectory)'
-  sppkgPath: '$(sppkgPath)/sharepoint/solution/monarch-sidenav.sppkg'
   appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
 
 steps:
   - checkout: self
 
-  - script: echo "Hello, pipeline is working!"
-    displayName: 'Pipeline Test Message'
+  - script: echo "Starting SharePoint deployment pipeline..."
+    displayName: 'Pipeline Start'
 
   - task: NodeTool@0
     inputs:
@@ -28,28 +26,53 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
+      echo "Building solution..."
       npx gulp build --ship
       npx gulp bundle --ship
     displayName: 'Build and bundle'
 
-  - script: npx gulp package-solution --ship
+  - script: |
+      echo "Packaging solution..."
+      npx gulp package-solution --ship
+      echo "Package created successfully"
     displayName: 'Package solution'
 
-  - script: npm install -g @pnp/cli-microsoft365
+  - script: |
+      echo "Installing M365 CLI..."
+      npm install -g @pnp/cli-microsoft365
+      echo "M365 CLI installed"
     displayName: 'Install CLI for Microsoft 365'
 
   - script: |
+      echo "Logging in to Microsoft 365..."
       m365 login --authType password --userName "$(M365_USERNAME)" --password "$(M365_PASSWORD)"
-      m365 spo app add -p "$(sppkgPath)" --overwrite --appCatalogUrl "$(appCatalogUrl)"
-      # Get the appId for deployment
+      echo "Login successful"
+      
+      echo "Checking for existing package file..."
+      ls -la sharepoint/solution/
+      
+      echo "Adding app to catalog..."
+      m365 spo app add -p "sharepoint/solution/monarch-sidenav.sppkg" --overwrite --appCatalogUrl "$(appCatalogUrl)"
+      echo "App added to catalog"
+      
+      echo "Getting app ID for deployment..."
       APP_ID=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "monarch-sidenav.sppkg") | .ID')
-      echo "Deploying appId: $APP_ID"
-      m365 spo app deploy --appId $APP_ID --appCatalogUrl "$(appCatalogUrl)" --wait
+      echo "App ID: $APP_ID"
+      
+      if [ -z "$APP_ID" ] || [ "$APP_ID" = "null" ]; then
+        echo "Error: Could not find app ID"
+        exit 1
+      fi
+      
+      echo "Deploying app..."
+      m365 spo app deploy --appId "$APP_ID" --appCatalogUrl "$(appCatalogUrl)" --scope tenant --wait
+      echo "Deployment completed successfully!"
     displayName: 'Deploy to SharePoint App Catalog'
     env:
       M365_USERNAME: $(M365_USERNAME)
       M365_PASSWORD: $(M365_PASSWORD)
-      sppkgPath: $(sppkgPath)
       appCatalogUrl: $(appCatalogUrl)
 
-# Optionally, add notification or artifact publishing steps here
+  - script: |
+      echo "Deployment pipeline completed successfully!"
+    displayName: 'Pipeline Complete'
