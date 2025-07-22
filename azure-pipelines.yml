@@ -10,17 +10,14 @@ pool:
 
 variables:
   solutionFolder: '$(System.DefaultWorkingDirectory)'
-  sppkgFile: 'monarch-sidenav.sppkg'  # Update with your .sppkg file name
-  sppkgPath: '$(solutionFolder)/sharepoint/solution/$(sppkgFile)'
+  sppkgPath: '$(sppkgPath)/sharepoint/solution/monarch-sidenav.sppkg'
   appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
-  # Copy the ID from config/package-solution.json (lowercase is fine)
-  APP_ID: '020453A9-06F3-4B81-8718-FC18DBEB8D15'  # <-- Change this to your package ID
 
 steps:
   - checkout: self
 
-  - script: echo "Pipeline started for Monarch SideNav"
-    displayName: 'Start Pipeline'
+  - script: echo "Hello, pipeline is working!"
+    displayName: 'Pipeline Test Message'
 
   - task: NodeTool@0
     inputs:
@@ -33,44 +30,26 @@ steps:
   - script: |
       npx gulp build --ship
       npx gulp bundle --ship
-    displayName: 'Build and bundle solution'
+    displayName: 'Build and bundle'
 
   - script: npx gulp package-solution --ship
-    displayName: 'Package SPFx solution'
+    displayName: 'Package solution'
 
   - script: npm install -g @pnp/cli-microsoft365
     displayName: 'Install CLI for Microsoft 365'
 
   - script: |
-      sudo apt-get update
-      sudo apt-get install -y jq
-    displayName: 'Install jq for JSON parsing'
-
-  - script: |
-      # Login to Microsoft 365
       m365 login --authType password --userName "$(M365_USERNAME)" --password "$(M365_PASSWORD)"
-
-      # Upload the sppkg to the App Catalog
       m365 spo app add -p "$(sppkgPath)" --overwrite --appCatalogUrl "$(appCatalogUrl)"
-
-      # Look for the app in the App Catalog (case-insensitive match on ID)
-      LOWERCASE_APP_ID="$(APP_ID)"
-      echo "Looking for App ID: $LOWERCASE_APP_ID in App Catalog..."
-      APP_ID_FOUND=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r --arg APP_ID "$LOWERCASE_APP_ID" '.[] | select(.ID | ascii_downcase == $APP_ID) | .ID')
-
-      if [ -z "$APP_ID_FOUND" ]; then
-        echo "ERROR: App ID not found in App Catalog!"
-        exit 1
-      fi
-
-      echo "Deploying App ID: $APP_ID_FOUND"
-      m365 spo app deploy --appId "$APP_ID_FOUND" --appCatalogUrl "$(appCatalogUrl)" --wait
-    displayName: 'Deploy SPFx App to SharePoint App Catalog'
+      # Get the appId for deployment
+      APP_ID=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "monarch-sidenav.sppkg") | .ID')
+      echo "Deploying appId: $APP_ID"
+      m365 spo app deploy --appId $APP_ID --appCatalogUrl "$(appCatalogUrl)" --wait
+    displayName: 'Deploy to SharePoint App Catalog'
     env:
       M365_USERNAME: $(M365_USERNAME)
       M365_PASSWORD: $(M365_PASSWORD)
       sppkgPath: $(sppkgPath)
       appCatalogUrl: $(appCatalogUrl)
-      APP_ID: $(APP_ID)
 
-# Optionally add test, publish, or notification steps here
+# Optionally, add notification or artifact publishing steps here
