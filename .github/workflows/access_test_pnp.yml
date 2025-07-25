@@ -1,0 +1,72 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  siteUrl: 'https://monarch360demo.sharepoint.com/sites/shan'
+  uploadFolder: 'SiteAssets'
+  clientId: '5ad16260-d421-4aac-9e46-e8206d73809a'
+  tenantId: '0f2587a8-5a33-4f75-9f71-5f7accedb502'
+  clientSecret: 'WuU8Q~udTVIs.T4lsK7wBEA6sA.JQo~jN4FKVcgc'   # Replace with actual secret
+
+steps:
+- checkout: self
+
+- task: PowerShell@2
+  displayName: 'Install PnP PowerShell'
+  inputs:
+    targetType: 'inline'
+    pwsh: true
+    script: |
+      Install-Module -Name PnP.PowerShell -Force -AllowClobber -Scope CurrentUser
+      Import-Module PnP.PowerShell
+
+- task: PowerShell@2
+  displayName: 'Test SharePoint Authentication'
+  inputs:
+    targetType: 'inline'
+    pwsh: true
+    script: |
+      try {
+        Connect-PnPOnline -Url "$(siteUrl)" `
+          -ClientId "$(clientId)" `
+          -ClientSecret "$(clientSecret)"
+        Write-Host "✅ Authentication successful"
+      }
+      catch {
+        Write-Host "❌ Authentication failed: $($_.Exception.Message)"
+        exit 1
+      }
+
+- task: PowerShell@2
+  displayName: 'Download JSON from SharePoint'
+  inputs:
+    targetType: 'inline'
+    pwsh: true
+    script: |
+      try {
+        Connect-PnPOnline -Url "$(siteUrl)" `
+          -ClientId "$(clientId)" `
+          -ClientSecret "$(clientSecret)"
+
+        Get-PnPFile -Url "https://monarch360demo.sharepoint.com/sites/shan/SiteAssets/monarchNavConfig.json" `
+          -Path "." `
+          -FileName "monarchNavConfig.json" `
+          -AsFile `
+          -Force
+
+        Write-Host "✅ Successfully downloaded monarchNavConfig.json"
+      }
+      catch {
+        Write-Host "❌ Failed to download JSON: $($_.Exception.Message)"
+        exit 1
+      }
+
+- task: PowerShell@2
+  displayName: 'Echo Upload Step'
+  inputs:
+    targetType: 'inline'
+    pwsh: true
+    script: |
+      Write-Host "📤 Simulating upload of updated monarchNavConfig.json to SharePoint"

@@ -1,50 +1,112 @@
-# azure-pipelines.yml
-
 trigger:
-    tags:
-      include:
-        - 'v*'
-  
-  pr: none
-  
-  pool:
-    vmImage: 'ubuntu-latest'
-  
-  variables:
-    solutionFolder: '$(System.DefaultWorkingDirectory)'
-    sppkgPath: '$(solutionFolder)/sharepoint/solution/*.sppkg'
-    appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
-  
-  steps:
+  tags:
+    include:
+      - 'v*'
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Folder where SPFx solution is built
+  solutionFolder: '$(System.DefaultWorkingDirectory)'
+  # Name of your generated .sppkg file (update if your filename differs!)
+  sppkgFile: 'monarch-sidenav.sppkg'
+  # Full path to your .sppkg
+  sppkgPath: '$(solutionFolder)/sharepoint/solution/$(sppkgFile)'
+  # SharePoint App Catalog site URL
+  appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
+  # App ID (Azure AD App Registration) -- NOT the same as SPFx package-solution ID!
+  APP_ID: '5ad16260-d421-4aac-9e46-e8206d73809a'
+  # Tenant ID (Azure AD)
+  TENANT_ID: '0f2587a8-5a33-4f75-9f71-5f7accedb502'
+  # Client Secret (store as secret variable in Azure DevOps, not in YAML for security!)
+  # CLIENT_SECRET: '***'
+
+steps:
   - checkout: self
-  
+
+  - script: echo "Pipeline started for Monarch SideNav"
+    displayName: 'Start Pipeline'
+
   - task: NodeTool@0
     inputs:
       versionSpec: '20.x'
     displayName: 'Install Node.js'
-  
+
   - script: npm ci
     displayName: 'Install dependencies'
-  
+
   - script: |
-      gulp build --ship
-      gulp bundle --ship
-    displayName: 'Build and bundle'
-  
-  - script: gulp package-solution --ship
-    displayName: 'Package solution'
-  
-  - script: npm install -g @pnp/cli-microsoft365
-    displayName: 'Install Office 365 CLI'
-  
+      npx gulp build --ship
+      npx gulp bundle --ship
+    displayName: 'Build and bundle solution'
+
+  - script: npx gulp package-solution --ship
+    displayName: 'Package SPFx solution'
+
   - script: |
-      m365 login --authType password --userName $(M365_USERNAME) --password $(M365_PASSWORD)
-      m365 spo app add -p $(sppkgPath) --overwrite --appCatalogUrl $(appCatalogUrl)
-      m365 spo app deploy --name "monarch-sidenav.sppkg" --appCatalogUrl $(appCatalogUrl) --scope tenant
-    displayName: 'Deploy to SharePoint App Catalog'
+      echo "Installing CLI for Microsoft 365 and jq..."
+      npm install -g @pnp/cli-microsoft365
+      sudo apt-get update
+      sudo apt-get install -y jq
+    displayName: 'Install CLI for Microsoft 365 and jq'
+
+  - script: |
+      echo "Logging in with Azure AD app-only (client secret)..."
+      m365 login --authType secret \
+        --appId "$(APP_ID)" \
+        --tenant "$(TENANT_ID)" \
+        --secret "$(CLIENT_SECRET)"
+      if [ $? -ne 0 ]; then
+        echo "❌ M365 login failed!"
+        exit 1
+      fi
+
+      echo "Checking for package file..."
+      ls -lh "$(sppkgPath)"
+      if [ ! -f "$(sppkgPath)" ]; then
+        echo "❌ .sppkg file not found at $(sppkgPath)"
+        exit 1
+      fi
+
+      echo "Uploading package to App Catalog..."
+      m365 spo app add -p "$(sppkgPath)" --overwrite --appCatalogUrl "$(appCatalogUrl)"
+      if [ $? -ne 0 ]; then
+        echo "❌ App upload failed!"
+        exit 1
+      fi
+
+      echo "Retrieving App ID from App Catalog..."
+      APP_ID_DEPLOY=$(m365 spo app list --appCatalogUrl "$(appCatalogUrl)" --output json | jq -r '.[] | select(.Name == "'$(sppkgFile)'") | .ID')
+      if [ -z "$APP_ID_DEPLOY" ]; then
+        echo "❌ Could not find App ID for deployment in catalog!"
+        exit 1
+      fi
+      echo "✅ Package (solution) App ID found: $APP_ID_DEPLOY"
+
+      echo "Deploying SPFx package..."
+      m365 spo app deploy --id "$APP_ID_DEPLOY" --appCatalogUrl "$(appCatalogUrl)" --wait
+      if [ $? -ne 0 ]; then
+        echo "❌ App deployment failed!"
+        exit 1
+      fi
+
+      echo "🎉 App deployed successfully!"
+    displayName: 'Deploy SPFx App to SharePoint App Catalog'
     env:
-      M365_USERNAME: $(M365_USERNAME)
-      M365_PASSWORD: $(M365_PASSWORD)
-  
-  # Optional: Notify on deployment, etc.
-  
+      APP_ID: $(APP_ID)              # Azure AD App (client) ID
+      TENANT_ID: $(TENANT_ID)        # Azure AD Tenant ID
+      CLIENT_SECRET: $(CLIENT_SECRET)  # Set as secret in Azure DevOps!
+      sppkgPath: $(sppkgPath)
+      sppkgFile: $(sppkgFile)
+      appCatalogUrl: $(appCatalogUrl)
+
+# ========================
+# Key Notes:
+# - APP_ID is your Azure AD App Registration's "Application (client) ID"
+# - CLIENT_SECRET should be set as a secret variable in your pipeline, not in YAML!
+# - The ID retrieved for deployment (APP_ID_DEPLOY) is the SPFx package ID (from app catalog/.sppkg, matches id in config/package-solution.json)
+# - Don't confuse the two!
+# ========================
