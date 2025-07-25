@@ -6,9 +6,9 @@ pool:
 variables:
   siteUrl: 'https://monarch360demo.sharepoint.com/sites/shan'
   uploadFolder: 'SiteAssets'
-  clientId: '5ad16260-d421-4aac-9e46-e8206d73809a'
-  tenantId: '0f2587a8-5a33-4f75-9f71-5f7accedb502'
-  clientSecret: 'WuU8Q~udTVIs.T4lsK7wBEA6sA.JQo~jN4FKVcgc'   # Replace with actual secret
+  clientId: ${clientId}
+  tenantId: ${tenantId}
+  clientSecret: ${clientSecret}  # Replace with actual secret
 
 steps:
 - checkout: self
