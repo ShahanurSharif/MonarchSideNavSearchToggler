@@ -58,7 +58,7 @@ The script is pre-configured with your Azure DevOps credentials:
 # Configuration in deploy-to-azure-devops.sh
 AZURE_DEVOPS_URL="https://monarch360@dev.azure.com/monarch360/Monarch360/_git/MonarchSideNavSearchToggler"
 AZURE_DEVOPS_USERNAME="Records.Manager"
-AZURE_DEVOPS_PASSWORD="58PRdPuFdJeVY5GjMuPwvQfpjXMqrXqcdgMbGnU76XcilyAeLkXAJQQJ99BGACAAAAAtrfB1AAASAZDO2JXw"
+AZURE_DEVOPS_PASSWORD="[SECRET - stored in .env file]"
 ```
 
 ## What the Script Does
