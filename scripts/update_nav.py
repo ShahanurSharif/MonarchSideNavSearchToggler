@@ -78,8 +78,54 @@ def update_items_from_excel(config, excel_file):
     print("Updating navigation items from Excel...")
     df = read_excel_data(excel_file)
     new_items = convert_excel_to_nav_items(df)
-    config['items'] = new_items
+    
+    # Debug: Print what we're updating
+    print(f"Original config items count: {len(config.get('items', []))}")
+    print(f"New items count: {len(new_items)}")
+    print(f"Sample new items: {new_items[:2] if new_items else 'No items'}")
+    
+    # If config is empty or doesn't have items, create a fresh config
+    if not config or not config.get('items'):
+        print("⚠️  Config is empty, creating fresh config...")
+        config = {
+            "version": "2.1.9.0",
+            "items": new_items,
+            "theme": {
+                "primaryColor": "#0078d4",
+                "secondaryColor": "#106ebe",
+                "backgroundColor": "#ffffff",
+                "textColor": "#323130",
+                "hoverColor": "#f3f2f1",
+                "fontFamily": "Segoe UI, system-ui, sans-serif",
+                "fontSize": "14px",
+                "borderRadius": "4px",
+                "sidebarWidth": "300px",
+                "borderEnabled": False,
+                "borderColor": "#d2d0ce",
+                "paddingTopBottom": "2px",
+                "logoUrl": "",
+                "logoSize": "40px",
+                "siteName": "Monarch360",
+                "siteUrl": "",
+                "position": "left"
+            },
+            "sidebar": {
+                "isOpen": True,
+                "isPinned": False,
+                "position": "left"
+            },
+            "searchEnabled": True,
+            "autoSave": True,
+            "lastModified": "",
+            "createdBy": "Excel Update Script",
+            "modifiedBy": "Excel Update Script"
+        }
+    else:
+        # Update existing config
+        config['items'] = new_items
+    
     print(f"Updated config with {len(new_items)} items")
+    print(f"Final config items count: {len(config.get('items', []))}")
     return config
 
 def upload_to_sharepoint(site_url, client_id, client_secret, local_path):
@@ -91,13 +137,27 @@ def upload_to_sharepoint(site_url, client_id, client_secret, local_path):
     folder_path = os.getenv('SHAREPOINT_FILE_PATH', '/sites/shan/SiteAssets/monarchSidebarNavConfig.json')
     folder_path = '/'.join(folder_path.split('/')[:-1])  # Remove filename to get folder path
     
-    target_folder = ctx.web.get_folder_by_server_relative_url(folder_path)
-    output_filename = os.getenv('OUTPUT_FILE', 'monarchSidebarNavConfig.json')
+    # Always use the original filename, not OUTPUT_FILE
+    original_filename = 'monarchSidebarNavConfig.json'
     
+    print(f"Uploading to folder: {folder_path}")
+    print(f"Uploading file: {original_filename}")
+    
+    target_folder = ctx.web.get_folder_by_server_relative_url(folder_path)
+    
+    # First, try to delete the existing file if it exists
+    try:
+        existing_file = ctx.web.get_file_by_server_relative_url(f"{folder_path}/{original_filename}")
+        existing_file.delete_object().execute_query()
+        print(f"Deleted existing file: {original_filename}")
+    except Exception as e:
+        print(f"File doesn't exist or couldn't delete: {e}")
+    
+    # Upload the new file
     with open(local_path, "rb") as content_file:
         file_content = content_file.read()
-    target_folder.upload_file(output_filename, file_content).execute_query()
-    print(f"Successfully uploaded updated config to SharePoint as {output_filename}")
+    target_folder.upload_file(original_filename, file_content).execute_query()
+    print(f"Successfully uploaded updated config to SharePoint as {original_filename}")
 
 def main():
     # Check if we have command line arguments or environment variables
@@ -144,13 +204,17 @@ def main():
         try:
             # Step 1: Download existing config from SharePoint
             config, local_path = download_existing_config(site_url, client_id, client_secret)
+            print(f"Downloaded config structure: {list(config.keys()) if config else 'No config'}")
+            print(f"Downloaded config items: {len(config.get('items', [])) if config else 0}")
 
             # Step 2: Update items from Excel (preserve other properties)
             updated_config = update_items_from_excel(config, excel_file)
+            print(f"Updated config items: {len(updated_config.get('items', []))}")
 
             # Step 3: Save updated config to temp file
             with open(local_path, "w", encoding="utf-8") as f:
                 json.dump(updated_config, f, indent=2, ensure_ascii=False)
+            print(f"Saved config to: {local_path}")
 
             # Step 4: Upload back to SharePoint
             upload_to_sharepoint(site_url, client_id, client_secret, local_path)
