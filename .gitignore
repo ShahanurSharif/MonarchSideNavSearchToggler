@@ -32,3 +32,6 @@ obj
 
 # Styles Generated Code
 *.scss.ts
+dist/
+node_modules/
+node_modules/
