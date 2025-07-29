@@ -1,0 +1,39 @@
+trigger:
+  tags:
+    include:
+      - 'v*'
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  solutionFolder: '$(System.DefaultWorkingDirectory)'
+  sppkgFile: 'monarch-sidenav.sppkg' # <-- update if your package filename differs!
+  sppkgPath: '$(solutionFolder)/sharepoint/solution/$(sppkgFile)'
+  appCatalogUrl: 'https://monarch360demo.sharepoint.com/sites/appcatalog'
+  # Your Azure AD App Registration IDs (do not hardcode secrets)
+  APP_ID: '5ad16260-d421-4aac-9e46-e8206d73809a'
+  TENANT_ID: '0f2587a8-5a33-4f75-9f71-5f7accedb502'
+
+steps:
+  - checkout: self
+
+  - script: git fetch origin
+
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Install Node.js'
+
+  - script: npm ci
+    displayName: 'Install dependencies'
+
+  - script: |
+      npx gulp build --ship
+      npx gulp bundle --ship
+    displayName: 'Build and bundle solution'
+
+  - script: npx gulp package-solution --ship
+    displayName: 'Package SPFx solution'
