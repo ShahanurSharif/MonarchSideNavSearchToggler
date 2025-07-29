@@ -48,24 +48,21 @@ def convert_excel_to_nav_items(df):
     """Convert Excel data to navigation items following MonarchNav pattern"""
     items = []
     for index, row in df.iterrows():
-        title = str(row.get('Title', '')).strip() if pd.notna(row.get('Title')) else ''
-        url = str(row.get('Url', '')).strip() if pd.notna(row.get('Url')) else ''
-        parent_id = int(row.get('ParentId', 0)) if pd.notna(row.get('ParentId')) else 0
-        order = int(row.get('Order', index + 1)) if pd.notna(row.get('Order')) else index + 1
+        # Use the actual column names from Excel
+        title = str(row.get('title', '')).strip() if pd.notna(row.get('title')) else ''
+        url = str(row.get('url', '')).strip() if pd.notna(row.get('url')) else ''
+        parentId = int(row.get('parentId', 0)) if pd.notna(row.get('parentId')) else 0
+        order = int(row.get('order', index + 1)) if pd.notna(row.get('order')) else index + 1
+        target = str(row.get('target', '_self')).strip() if pd.notna(row.get('target')) else '_self'
         
         if not title:
             continue
-            
-        # Determine target based on URL
-        target = '_self'  # Default to same window
-        if url.startswith('http') and 'monarch360demo.sharepoint.com' not in url:
-            target = '_blank'  # External links open in new tab
         
         item = {
-            "id": index + 1,
+            "id": int(row.get('id', index + 1)) if pd.notna(row.get('id')) else index + 1,
             "title": title,
             "url": url,
-            "parentId": parent_id,
+            "parentId": parentId,
             "order": order,
             "target": target
         }

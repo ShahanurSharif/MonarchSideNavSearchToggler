@@ -1,0 +1,66 @@
+{
+  "version": "2.1.9.0",
+  "items": [
+    {
+      "id": 1,
+      "title": "Home",
+      "url": "/",
+      "parentId": 0,
+      "order": 1,
+      "target": "_self"
+    },
+    {
+      "id": 2,
+      "title": "Documents",
+      "url": "/documents",
+      "parentId": 0,
+      "order": 2,
+      "target": "_self"
+    },
+    {
+      "id": 3,
+      "title": "Policies",
+      "url": "/documents/policies",
+      "parentId": 2,
+      "order": 1,
+      "target": "_self"
+    },
+    {
+      "id": 4,
+      "title": "Procedures",
+      "url": "/documents/procedures",
+      "parentId": 2,
+      "order": 2,
+      "target": "_self"
+    }
+  ],
+  "theme": {
+    "primaryColor": "#0078d4",
+    "secondaryColor": "#106ebe",
+    "backgroundColor": "#ffffff",
+    "textColor": "#323130",
+    "hoverColor": "#f3f2f1",
+    "fontFamily": "Segoe UI, system-ui, sans-serif",
+    "fontSize": "14px",
+    "borderRadius": "4px",
+    "sidebarWidth": "300px",
+    "borderEnabled": false,
+    "borderColor": "#d2d0ce",
+    "paddingTopBottom": "2px",
+    "logoUrl": "",
+    "logoSize": "40px",
+    "siteName": "Monarch360",
+    "siteUrl": "",
+    "position": "left"
+  },
+  "sidebar": {
+    "isOpen": true,
+    "isPinned": false,
+    "position": "left"
+  },
+  "searchEnabled": true,
+  "autoSave": true,
+  "lastModified": "",
+  "createdBy": "Excel Update Script",
+  "modifiedBy": "Excel Update Script"
+}
