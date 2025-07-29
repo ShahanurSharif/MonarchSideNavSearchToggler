@@ -18,6 +18,6 @@ git commit -m "Update - $(date '+%Y-%m-%d %H:%M:%S')"
 
 # Push to Azure DevOps
 CREDENTIAL_URL="https://$USERNAME:$PASSWORD@dev.azure.com/monarch360/Monarch360/_git/MonarchSideNavSearchToggler"
-git push "$CREDENTIAL_URL" main
+git push "$CREDENTIAL_URL" master
 
 echo "✅ Successfully pushed to Azure DevOps!" 

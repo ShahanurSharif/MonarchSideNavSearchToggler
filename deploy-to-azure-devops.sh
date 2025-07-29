@@ -164,14 +164,14 @@ push_to_azure_devops() {
     CREDENTIAL_URL="https://$AZURE_DEVOPS_USERNAME:$AZURE_DEVOPS_PASSWORD@dev.azure.com/monarch360/Monarch360/_git/MonarchSideNavSearchToggler"
     
     # Push to Azure DevOps
-    if git push azure-devops main; then
+    if git push azure-devops master; then
         log_success "Successfully pushed to Azure DevOps"
     else
         log_error "Failed to push to Azure DevOps"
         log_info "Trying with explicit credentials..."
         
         # Try with explicit credentials
-        if git push "$CREDENTIAL_URL" main; then
+        if git push "$CREDENTIAL_URL" master; then
             log_success "Successfully pushed to Azure DevOps with explicit credentials"
         else
             log_error "Failed to push even with explicit credentials"
