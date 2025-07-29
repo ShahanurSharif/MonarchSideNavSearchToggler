@@ -19,8 +19,6 @@ variables:
 
 steps:
   - checkout: self
-  - script: git fetch origin
-    displayName: 'Fetch latest changes'
 
   - task: NodeTool@0
     inputs:
