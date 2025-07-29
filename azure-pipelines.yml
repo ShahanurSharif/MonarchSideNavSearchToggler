@@ -20,6 +20,8 @@ variables:
 steps:
   - checkout: self
 
+  - script: git fetch origin
+
   - task: NodeTool@0
     inputs:
       versionSpec: '20.x'
