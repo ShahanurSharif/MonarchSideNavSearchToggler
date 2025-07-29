@@ -21,6 +21,7 @@ interface SidebarNavigationProps {
   onAddChild: (id: number) => void;
   onAddRoot: () => void;
   theme: IThemeConfig;
+  canEdit?: boolean;
 }
 
 export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
@@ -31,7 +32,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   onDelete,
   onAddChild,
   onAddRoot,
-  theme
+  theme,
+  canEdit = true
 }) => {
   const [expanded, setExpanded] = React.useState<{ [id: number]: boolean }>({});
 
@@ -195,7 +197,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
               ) : (
                 <span className={styles.navTitle} style={{ fontSize: theme.fontSize, color: theme.textColor }}>{item.title}</span>
               )}
-              {isConfigMode && (
+              {isConfigMode && canEdit && (
                 <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
                   <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(item.id)}>
                     <Icon iconName="Edit" />
@@ -233,7 +235,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       ) : (
                         <span className={styles.navTitle} style={{ fontSize: theme.fontSize, color: theme.textColor }}>{child.title}</span>
                       )}
-                      {isConfigMode && (
+                      {isConfigMode && canEdit && (
                         <span style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
                           <button className={`${styles.configButton} ${styles.edit}`} title="Edit Item" aria-label="Edit" onClick={() => onEdit(child.id)}>
                             <Icon iconName="Edit" />
@@ -252,7 +254,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           </li>
         );
       })}
-      {isConfigMode && (
+      {isConfigMode && canEdit && (
         <li className={styles.configActions}>
           <button className={styles.addButton} onClick={onAddRoot}>
             <Icon iconName="Add" /> Add Navigation Item

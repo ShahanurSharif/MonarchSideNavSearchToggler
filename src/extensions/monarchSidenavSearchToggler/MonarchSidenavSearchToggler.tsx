@@ -9,6 +9,7 @@ import { IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { Icon } from '@fluentui/react/lib/Icon';
 import { NavigationConfigService } from './services/NavigationConfigService';
 import { DefaultTheme, IThemeConfig } from './interfaces/INavigationInterfaces';
+import { usePermissions } from './utils/permissionUtils';
 
 // Extend NavItem to include 'order' and require 'url'
 export interface NavItem {
@@ -27,6 +28,9 @@ interface MonarchSidenavSearchTogglerProps {
 
 export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavSearchTogglerProps): React.ReactElement<MonarchSidenavSearchTogglerProps> {
   console.log('🚀 MonarchSidenavSearchToggler: Component initializing...');
+  
+  // Permission check
+  const { canEdit, loading: permissionLoading } = usePermissions(context);
   
   const [nav, setNav] = React.useState<NavItem[]>([]);
   const [search, setSearch] = React.useState('');
@@ -452,7 +456,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
   return (
     <>
       {/* Only render sidebar and toggle button after config is loaded to avoid flash of wrong position */}
-      {!isLoading && (
+      {!isLoading && !permissionLoading && (
         <>
           <div style={toggleButtonStyle}>
             <SidebarToggleButton
@@ -548,10 +552,11 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                   onAddChild={handleAddChild}
                   onAddRoot={handleAddRoot}
                   theme={currentTheme}
+                  canEdit={canEdit}
                 />
               </div>
               <div className={styles.sidebarFooter}>
-                <h2 className={styles.sidebarTitle}>Navigation</h2>
+                <h2 className={styles.sidebarTitle}>Settings</h2>
                 <div className={styles.headerButtons}>
                   <button
                     className={styles.headerButton}
@@ -574,7 +579,7 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                   >
                     <Icon iconName={isPinned ? 'Unpin' : 'Pin'} />
                   </button>
-                  {isConfig && (
+                  {isConfig && canEdit && (
                     <>
                       <button className={styles.addButton} style={{marginRight: 8}} onClick={handleAddRoot}>
                         <Icon iconName="Add" />
@@ -584,9 +589,11 @@ export default function MonarchSidenavSearchToggler({ context }: MonarchSidenavS
                       </button>
                     </>
                   )}
-                  <button className={styles.headerButton} aria-label="Edit Mode" title="Edit Navigation" onClick={() => setIsConfig(c => !c)}>
-                    <Icon iconName="Edit" />
-                  </button>
+                  {canEdit && !permissionLoading && (
+                    <button className={styles.headerButton} aria-label="Edit Mode" title="Edit Navigation" onClick={() => setIsConfig(c => !c)}>
+                      <Icon iconName="Edit" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
