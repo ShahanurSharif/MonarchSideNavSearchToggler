@@ -1,144 +1,149 @@
-# Release Notes - MonarchSideNavSearchToggler
+# Release Notes
 
-## Version 2.1.3 (Latest) - 2024-12-19
+## Version 2.2.0.0 (Latest)
 
-### 🚀 Major Fixes
-- **Fixed Toggle Button Visibility**: Resolved critical issue where toggle button was not showing in production
-- **Fixed Property Configuration**: Corrected XML files to use proper `description` property instead of `testMessage`
-- **Enhanced Toggle Button Styling**: Improved visibility with higher z-index (9999) and better background opacity
-- **Removed Border**: Removed border from toggle button per client request for cleaner appearance
+### 🎉 Major Features
+- **Dynamic Sidebar Positioning**: Sidebar can now be positioned on the left or right side of the screen
+- **Permission-Based Access Control**: Only site owners and users with appropriate permissions can access edit functionality
+- **Enhanced UI/UX**: Improved sidebar footer with "Settings" label and better visual feedback
+
+### ✨ New Features
+- **Sidebar Position Control**: Added dropdown in theme settings to control sidebar position (Left/Right)
+- **Permission System**: Implemented comprehensive permission checking for edit functionality
+  - Site Owner permissions required for edit access
+  - Full Control and Manage Web permissions also grant edit access
+  - Edit buttons are hidden for users without proper permissions
+- **Streamlined Configuration**: Removed redundant position property from theme config
+- **Conditional Rendering**: Eliminated sidebar "flash" by rendering only after configuration is loaded
 
 ### 🔧 Technical Improvements
-- **Added Comprehensive Debug Logging**: Enhanced troubleshooting capabilities with detailed console logs
-- **Fixed Function Order**: Resolved linter warnings by reordering function definitions
-- **Added Version Sync Script**: Created `sync-version.js` for automated version management across all files
-- **Improved Error Handling**: Better retry logic and error recovery for configuration loading
-
-### 📦 Deployment
-- **Production Build**: Successfully built and packaged for production deployment
-- **Package Size**: 231KB optimized package
-- **Version Sync**: All version numbers synchronized to 2.1.3 across package.json, manifest, and solution files
+- **Performance Optimization**: Reduced configuration redundancy for better performance
+- **TypeScript Enhancements**: Improved type safety and removed unused imports
+- **Error Handling**: Better error handling for permission checks and configuration loading
+- **Code Organization**: Created dedicated permission utilities (`permissionUtils.ts`)
 
 ### 🐛 Bug Fixes
-- Fixed infinite loop in search functionality
-- Resolved pin/unpin sidebar state persistence issues
-- Fixed SharePoint style override conflicts
-- Improved sidebar loading experience with retry logic
-- Fixed UI/UX issues with header padding and theme font size application
+- Fixed sidebar and toggle button positioning issues
+- Resolved configuration loading race conditions
+- Fixed TypeScript compilation errors and linting warnings
+- Corrected sidebar position persistence in configuration
+
+### 📁 Files Modified
+- `src/extensions/monarchSidenavSearchToggler/MonarchSidenavSearchToggler.tsx`
+- `src/extensions/monarchSidenavSearchToggler/components/ThemeSettingsModal.tsx`
+- `src/extensions/monarchSidenavSearchToggler/components/SidebarNavigation.tsx`
+- `src/extensions/monarchSidenavSearchToggler/components/SidebarToggleButton.tsx`
+- `src/extensions/monarchSidenavSearchToggler/interfaces/INavigationInterfaces.ts`
+- `src/extensions/monarchSidenavSearchToggler/utils/permissionUtils.ts` (New)
+
+### 🔒 Security
+- Implemented proper permission validation for all edit operations
+- Enhanced security by restricting edit access to authorized users only
 
 ---
 
-## Version 2.1.2 - 2024-12-19
+## Version 2.1.9.0
 
-### 🎨 UI/UX Improvements
-- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
-- **Theme Font Size**: Restricted theme font size application to navigation list items only
-- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
+### 🎉 Major Features
+- **Excel to JSON Navigation Updates**: Automated navigation configuration updates from Excel files
+- **CI/CD Pipeline Integration**: GitHub Actions and Azure DevOps pipeline support
+- **Python Script Automation**: Script to update SharePoint navigation from Excel data
 
-### 🔧 Technical Enhancements
-- **Loading Experience**: Moved loading indicator inside sidebar for better UX
-- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
-- **State Management**: Fixed React state closure issues by passing explicit pin state during save
+### ✨ New Features
+- **Excel Integration**: Python script to read Excel files and update navigation configuration
+- **CI/CD Pipelines**: Automated build and deployment workflows
+- **Azure DevOps Integration**: Push script for Azure DevOps repository
+- **Environment Variable Support**: Secure credential management
 
-### 🐛 Bug Fixes
-- Fixed infinite loop in search functionality by memoizing search results
-- Resolved pin/unpin sidebar behavior with proper state persistence
-- Fixed SharePoint overriding custom styles with enhanced CSS injection
-- Resolved linter warnings related to function order and missing return types
+### 🔧 Technical Improvements
+- **Automated Deployment**: Streamlined deployment process with CI/CD
+- **Script Automation**: Python script for bulk navigation updates
+- **Secure Credentials**: Environment variable-based authentication
 
----
-
-## Version 2.1.1 - 2024-12-19
-
-### 🎨 UI/UX Improvements
-- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
-- **Theme Font Size**: Restricted theme font size application to navigation list items only
-- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
-
-### 🔧 Technical Enhancements
-- **Loading Experience**: Moved loading indicator inside sidebar for better UX
-- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
-- **State Management**: Fixed React state closure issues by passing explicit pin state during save
-
-### 🐛 Bug Fixes
-- Fixed infinite loop in search functionality by memoizing search results
-- Resolved pin/unpin sidebar behavior with proper state persistence
-- Fixed SharePoint overriding custom styles with enhanced CSS injection
-- Resolved linter warnings related to function order and missing return types
+### 📁 Files Added
+- `scripts/update_nav.py`
+- `azure-pipelines-excel-to-json.yml`
+- `push-to-azure.sh`
+- `.env` (for local development)
+- Various documentation files
 
 ---
 
-## Version 2.1.0 - 2024-12-19
+## Version 2.1.8.0
 
-### 🎨 UI/UX Improvements
-- **Sidebar Header Padding**: Changed from 4px 20px to 4px 8px for better spacing
-- **Theme Font Size**: Restricted theme font size application to navigation list items only
-- **SharePoint Style Overrides**: Enhanced CSS injection with !important rules and MutationObserver for persistent styling
+### 🎉 Major Features
+- **Theme Configuration Modal**: Comprehensive theme settings interface
+- **Advanced Styling Options**: Enhanced customization capabilities
+- **Real-time Preview**: Live preview of theme changes
 
-### 🔧 Technical Enhancements
-- **Loading Experience**: Moved loading indicator inside sidebar for better UX
-- **Configuration Loading**: Added retry logic for hard reloads (up to 2 retries)
-- **State Management**: Fixed React state closure issues by passing explicit pin state during save
+### ✨ New Features
+- **Theme Settings Modal**: Complete theme configuration interface
+- **Color Customization**: Background, text, and accent color controls
+- **Font Size Controls**: Adjustable font sizes for better readability
+- **Real-time Updates**: Instant preview of theme changes
 
-### 🐛 Bug Fixes
-- Fixed infinite loop in search functionality by memoizing search results
-- Resolved pin/unpin sidebar behavior with proper state persistence
-- Fixed SharePoint overriding custom styles with enhanced CSS injection
-- Resolved linter warnings related to function order and missing return types
-
----
-
-## Version 2.0.0 - 2024-12-19
-
-### 🚀 Major Features
-- **Hierarchical Navigation**: Full support for parent-child navigation structure
-- **Search Functionality**: Real-time search with highlighting and filtering
-- **Theme Customization**: Comprehensive theme system with color, font, and layout options
-- **Pin/Unpin Sidebar**: Persistent sidebar state with content adjustment
-- **Configuration Management**: JSON-based configuration with SharePoint integration
-
-### 🎨 UI Components
-- **Sidebar Navigation**: Collapsible hierarchical navigation with icons
-- **Search Interface**: Real-time search with clear functionality
-- **Theme Settings Modal**: Comprehensive theme customization interface
-- **Navigation Config Modal**: Add, edit, and delete navigation items
-- **Toggle Button**: Draggable toggle button for sidebar control
-
-### 🔧 Technical Features
-- **SharePoint Integration**: Full SPFx application customizer implementation
-- **Configuration Service**: SharePoint list-based configuration storage
-- **Responsive Design**: Mobile-friendly responsive layout
-- **Accessibility**: ARIA labels and keyboard navigation support
-- **Error Handling**: Comprehensive error handling and retry logic
+### 🔧 Technical Improvements
+- **Modal Architecture**: Improved modal component structure
+- **State Management**: Better theme state handling
+- **User Experience**: Enhanced theme configuration workflow
 
 ---
 
-## Version 1.0.0 - 2024-12-19
+## Version 2.1.7.0
+
+### 🎉 Major Features
+- **Navigation Configuration Modal**: Advanced navigation item management
+- **Drag and Drop Support**: Enhanced navigation item reordering
+- **Search Functionality**: Improved navigation search capabilities
+
+### ✨ New Features
+- **Navigation Config Modal**: Complete navigation management interface
+- **Item Management**: Add, edit, delete navigation items
+- **Hierarchical Support**: Parent-child navigation relationships
+- **Search Enhancement**: Better search performance and accuracy
+
+### 🔧 Technical Improvements
+- **Modal Components**: Improved modal architecture
+- **State Management**: Enhanced navigation state handling
+- **User Interface**: Better navigation management experience
+
+---
+
+## Version 2.1.6.0
+
+### 🎉 Major Features
+- **Sidebar Toggle Button**: Draggable toggle button for sidebar control
+- **Enhanced Navigation**: Improved navigation item rendering
+- **Configuration Persistence**: Better configuration saving and loading
+
+### ✨ New Features
+- **Draggable Toggle**: Sidebar toggle button with drag functionality
+- **Navigation Items**: Enhanced navigation item display
+- **Configuration Service**: Improved configuration management
+
+### 🔧 Technical Improvements
+- **Component Architecture**: Better component structure
+- **State Management**: Enhanced state handling
+- **User Experience**: Improved sidebar interaction
+
+---
+
+## Version 2.1.0
 
 ### 🎉 Initial Release
-- **Basic Sidebar Navigation**: Simple navigation structure
-- **Toggle Functionality**: Basic sidebar show/hide functionality
-- **SharePoint Integration**: SPFx application customizer foundation
-- **Configuration System**: Basic configuration management
+- **Sidebar Navigation**: Basic sidebar navigation functionality
+- **Search Integration**: Search functionality within sidebar
+- **Theme Support**: Basic theme customization
+- **Configuration Management**: Navigation configuration system
 
----
+### ✨ Core Features
+- **Sidebar Component**: Main sidebar navigation component
+- **Search Capability**: Search within navigation items
+- **Theme Configuration**: Basic theme settings
+- **Configuration Persistence**: Save and load navigation configuration
 
-## Installation Instructions
-
-1. **Upload Package**: Upload `monarch-sidenav.sppkg` to SharePoint App Catalog
-2. **Deploy Solution**: Deploy the solution to your SharePoint environment
-3. **Activate Features**: Activate the application customizer feature
-4. **Configure Navigation**: Use the configuration interface to set up navigation items
-5. **Customize Theme**: Apply theme settings as needed
-
-## Configuration
-
-The extension uses a JSON configuration file stored in SharePoint that includes:
-- Navigation items with hierarchical structure
-- Theme settings (colors, fonts, layout)
-- Sidebar state (open/closed, pinned/unpinned)
-- Toggle button position
-
-## Support
-
-For issues or questions, please check the console logs for debugging information and refer to the documentation in the `/docs` folder. 
+### 🔧 Technical Foundation
+- **React Components**: Core React component architecture
+- **SharePoint Integration**: SharePoint Framework (SPFx) integration
+- **TypeScript Support**: Full TypeScript implementation
+- **CSS Modules**: Component-scoped styling 
