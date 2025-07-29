@@ -1,0 +1,32 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  SHAREPOINT_TENANT: 'https://monarch360demo.sharepoint.com'
+  SHAREPOINT_SITE_PATH: '/sites/shan'
+  SHAREPOINT_FILE_PATH: 'SiteAssets/monarchSidebarNavConfig.json'
+  EXCEL_FILE: 'menu_items.xlsx'
+  OUTPUT_FILE: 'updated_monarchSidebarNavConfig.json'
+
+# Define secrets in Azure DevOps UI or as below (for demo)
+  SHAREPOINT_CLIENT_ID: $(sharepointClientId)
+  SHAREPOINT_CLIENT_SECRET: $(sharepointClientSecret)
+
+steps:
+- script: |
+    pip install pandas office365-rest-python-client openpyxl
+  displayName: 'Install Python dependencies'
+
+- script: |
+    python scripts/update_nav.py
+  displayName: 'Update SharePoint Navigation'
+  env:
+    SHAREPOINT_TENANT: $(SHAREPOINT_TENANT)
+    SHAREPOINT_SITE_PATH: $(SHAREPOINT_SITE_PATH)
+    SHAREPOINT_CLIENT_ID: $(sharepointClientId)
+    SHAREPOINT_CLIENT_SECRET: $(sharepointClientSecret)
+    SHAREPOINT_FILE_PATH: $(SHAREPOINT_FILE_PATH)
+    EXCEL_FILE: $(EXCEL_FILE)
+    OUTPUT_FILE: $(OUTPUT_FILE) 
