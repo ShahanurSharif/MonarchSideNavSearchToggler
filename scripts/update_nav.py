@@ -132,19 +132,13 @@ def main():
             print(f"\n❌ Test failed: {e}")
             sys.exit(1)
     else:
-        # Support both old and new environment variable names
-        site_url = os.getenv('SHAREPOINT_SITE_URL') or os.getenv('SHAREPOINT_TENANT')
-        site_path = os.getenv('SHAREPOINT_SITE_PATH', '/sites/shan')
-        
-        # Construct full site URL if only tenant is provided
-        if site_url and not site_url.endswith(site_path):
-            site_url = site_url + site_path
-            
+        # Use conventional environment variable names
+        site_url = os.getenv('SHAREPOINT_SITE_URL')
         client_id = os.getenv('SHAREPOINT_CLIENT_ID')
         client_secret = os.getenv('SHAREPOINT_CLIENT_SECRET')
         
         if not all([site_url, client_id, client_secret]):
-            print("Missing SharePoint credentials. Set SHAREPOINT_TENANT/SHAREPOINT_SITE_URL, SHAREPOINT_CLIENT_ID, SHAREPOINT_CLIENT_SECRET")
+            print("Missing SharePoint credentials. Set SHAREPOINT_SITE_URL, SHAREPOINT_CLIENT_ID, SHAREPOINT_CLIENT_SECRET")
             sys.exit(1)
 
         try:

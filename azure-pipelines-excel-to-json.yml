@@ -4,15 +4,14 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  SHAREPOINT_TENANT: 'https://monarch360demo.sharepoint.com'
-  SHAREPOINT_SITE_PATH: '/sites/shan'
+  SHAREPOINT_SITE_URL: 'https://monarch360demo.sharepoint.com/sites/shan'
   SHAREPOINT_FILE_PATH: 'SiteAssets/monarchSidebarNavConfig.json'
   EXCEL_FILE: 'menu_items.xlsx'
   OUTPUT_FILE: 'updated_monarchSidebarNavConfig.json'
 
-# Define secrets in Azure DevOps UI or as below (for demo)
-  SHAREPOINT_CLIENT_ID: $(sharepointClientId)
-  SHAREPOINT_CLIENT_SECRET: $(sharepointClientSecret)
+# Secrets should be defined in Azure DevOps Library:
+# - SHAREPOINT_CLIENT_ID
+# - SHAREPOINT_CLIENT_SECRET
 
 steps:
 - script: |
@@ -23,8 +22,7 @@ steps:
     python scripts/update_nav.py
   displayName: 'Update SharePoint Navigation'
   env:
-    SHAREPOINT_TENANT: $(SHAREPOINT_TENANT)
-    SHAREPOINT_SITE_PATH: $(SHAREPOINT_SITE_PATH)
+    SHAREPOINT_SITE_URL: $(SHAREPOINT_SITE_URL)
     SHAREPOINT_CLIENT_ID: $(sharepointClientId)
     SHAREPOINT_CLIENT_SECRET: $(sharepointClientSecret)
     SHAREPOINT_FILE_PATH: $(SHAREPOINT_FILE_PATH)
