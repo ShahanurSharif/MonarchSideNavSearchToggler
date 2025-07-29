@@ -197,29 +197,22 @@ create_deployment_tag() {
 
 # Main deployment function
 main() {
-    echo "🚀 Starting Azure DevOps deployment for MonarchSideNavSearchToggler"
-    echo "================================================================"
+    echo "🚀 Starting Azure DevOps push for MonarchSideNavSearchToggler"
+    echo "============================================================="
     
-    # Run all steps
-    check_directory
-    check_prerequisites
-    install_dependencies
-    build_project
-    check_package
+    # Run only git operations
     setup_git
     commit_changes
     push_to_azure_devops
     create_deployment_tag
     
     echo ""
-    echo "🎉 Deployment completed successfully!"
-    echo "📦 Package: sharepoint/solution/monarch-sidenav.sppkg"
+    echo "🎉 Push completed successfully!"
     echo "🔗 Repository: $AZURE_DEVOPS_URL"
     echo ""
     echo "Next steps:"
     echo "1. Go to Azure DevOps to verify the changes"
     echo "2. Run the Excel to JSON pipeline if needed"
-    echo "3. Deploy the package to SharePoint App Catalog"
 }
 
 # Handle script arguments
