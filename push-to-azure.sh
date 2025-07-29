@@ -1,11 +1,22 @@
 #!/bin/bash
 
+# Load environment variables from .env file
+if [ -f ".env" ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
 # Simple script to push to Azure DevOps
 AZURE_DEVOPS_URL="https://monarch360@dev.azure.com/monarch360/Monarch360/_git/MonarchSideNavSearchToggler"
 USERNAME="Records.Manager"
-PASSWORD="58PRdPuFdJeVY5GjMuPwvQfpjXMqrXqcdgMbGnU76XcilyAeLkXAJQQJ99BGACAAAAAtrfB1AAASAZDO2JXw"
+PASSWORD="${AZURE_DEVOPS_PASSWORD:-}"
 
 echo "🚀 Pushing to Azure DevOps..."
+
+# Check if password is loaded
+if [ -z "$PASSWORD" ]; then
+    echo "❌ Azure DevOps password not found. Please check your .env file."
+    exit 1
+fi
 
 # Add Azure DevOps remote if not exists
 if ! git remote get-url azure-devops &> /dev/null; then
